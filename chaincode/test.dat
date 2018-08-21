@@ -1,0 +1,21 @@
+
+addUser -- root:
+
+{"public_key":"MIIBCgKCAQEA1QVZzTjW/uq6tk/Oct6rO/HyPZB5+xSt2n7bJy7XPFRNbfeKV0gGYeHJy8ctbDCN8TxU2evxrPr5QaXcJsOHBoJdo9MLaxwirz5bT2Ctom7W2hIfUVcafzTvbRtpAZCkS+ZwGjn/u3/gsJqF0HUHZlmobGL9JxF0BF8vqD/x7VD0qaPlwPQNRk3cyuywIR/a1kAjxiXjWUrmnFvqpNZwO5P0+/KwQ3D8v/PS+s1ZaG1SaFqPSHm9CZp7wknin3/0prLPxnVmtUv3lsKP6lv4Vc6i3OSlBWBIlSIXG9GjDgCcAHvDZnixgoa6jv7Zif2qYfOTqwL/rTSgWPGRm3oWCwIDAQAB",timestamp:"100"}
+
+addUser -- seller:
+{"public_key":"MIIBCgKCAQEAzYVkwedEM9pYZbGi6rSoDopr+R/rb3UDq40WXKFb1ZbVuwXXIWWvOlSGbNvSZ0CvAANNjYbY7DcPwILlXm/7AT0L43ZJIgTYHYOZYVVCXWwNZBWcOfnh63iwvMSQ47ml17q64fR2Cpy9JHK28k3IRM3of7NxqdbCoOUm2qqPtJ3y+Yo3tlSCywS+EhFmj9Ukf7yPA4rgmcCsybHn+i9wT19uA6oZmz0VgObgPEtaHzEPGFEtfh/LJVTRsxl3WMqaNFutDBDWTDtg4ieVmb8aX2gVNC26sJTaklzPWodfK+fZpVqYC9LgbLCURDVTmAUqGfGqqmdyGlDIEF+mfVrXwwIDAQAB",timestamp:"100"}
+
+
+addUser -- user:
+{"public_key":"MIIBCgKCAQEAsn+iNcrVLL4qEHGbXwW+zit08N0FzP54hP8x+EMhYbVUNE06ui7/8j2pm6WvjB3KXVdkL/CHSNad4UB9+asFeL5hCTZhmoBRaDZ13yqhtICHlukzemFNyrfE0LZJc4RRdQHa6eMcKpo/TJKCNHoBlESIX9QLmrNrr6GQ93obrx5FxSlP/iPPII+e1dNpTB7j7Lo/PdscsYnA0N1KRWHdqsrsYUM7sPwCRe8DoA+bPbZ0VA17HCoga6z68cpe3K+r+99uUbp1zYfpUCrg/mgDGJYNGDDlfqHZbDBkWBdeT7TZ9RUkhp20NBaY6oQ7+CDRYf/gRR1Gq8sjYAzEHog7GQIDAQAB",timestamp:"100"}
+
+Upgrade user to seller
+{"callid":"rootID","id":"cellid","limit":"1000000",timestamp:"100"}
+
+
+send transcation
+{"callid":"seller","to_id":"userid","coin":"100",timestamp:"100"}
+
+getuser
+{"callid":"userid","id":"userid",timestamp:"100"}
