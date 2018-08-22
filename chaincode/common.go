@@ -13,12 +13,12 @@ const (
 )
 
 type UserItem struct {
-	ID        string `json:"id"`        //用户ID，md5（pubkey)
-	Type      int    `json:"type"`      //用户类型，0 root 1 管理员 2 顾客
-	Coin      int    `json:"coin"`      //当前筹码
-	PubKey    string `json:"pubkey"`    //用户公钥
-	CoinBase  int    `json:"coin_base"` //从root预借的筹码,只有Type ==1 才有这两个字段
-	CoinLimit int    `json:"coin_base"` //可以从root预借的最大筹码
+	ID        string `json:"id"`     //用户ID，md5（pubkey)
+	Type      int    `json:"type"`   //用户类型，0 root 1 管理员 2 顾客
+	Coin      int    `json:"coin"`   //当前筹码
+	PubKey    string `json:"pubkey"` //用户公钥
+	CoinBase  int    `json:"base"`   //从root预借的筹码,只有Type ==1 才有这两个字段
+	CoinLimit int    `json:"limit"`  //可以从root预借的最大筹码
 }
 
 func (o UserItem) ToBuffer() []byte {
@@ -54,6 +54,21 @@ func (o UserManger) ToBuffer() []byte {
 		return []byte{}
 	}
 	return buf
+}
+
+func NewManger(stub shim.ChaincodeStubInterface) *UserManger {
+	obj := &UserManger{
+		Users:    []string{},
+		Sellers:  []string{},
+		LogIndex: 0,
+	}
+	buf, _ := stub.GetState(MANGER_KEY)
+	if buf != nil {
+		json.Unmarshal(buf, obj)
+	} else {
+		obj.save(stub)
+	}
+	return obj
 }
 
 func (o *UserManger) save(stub shim.ChaincodeStubInterface) {
@@ -157,6 +172,9 @@ func (o *UserManger) Send(Caller *UserItem, ID string, coin int, stub shim.Chain
 	}
 	if Caller.IsRoot() {
 		return errors.New("root not have any coin")
+	}
+	if coin < 0 {
+		return errors.New("invliad coin value")
 	}
 	if Caller.Coin < coin {
 		if !Caller.IsSeller() {

@@ -1,7 +1,7 @@
 package main
 
 type AddUserOffer struct {
-	PublickKey string `json:"public key"`
+	PublickKey string `json:"pubkey"`
 	Time       int64  `json:"timestamp"`
 }
 
@@ -20,7 +20,7 @@ type GetUserOffser struct {
 
 type SendTranscationOffser struct {
 	CallID string `json:"callid"`
-	ToUser string `json:"to_id"`
+	ToUser string `json:"toid"`
 	Coin   int    `json:"coin"`
 	Time   int64  `json:"timestamp"`
 }

@@ -12,40 +12,23 @@ import (
 	pb "github.com/hyperledger/fabric/protos/peer"
 )
 
+const (
+	DEBUG = true
+)
+
 type CoinChaincode struct {
-	debug  bool
-	manger *UserManger
 }
 
 func (t *CoinChaincode) Init(stub shim.ChaincodeStubInterface) pb.Response {
-	buf, err := stub.GetState(MANGER_KEY)
-	if err != nil {
-		obj := &UserManger{}
-		err := json.Unmarshal(buf, obj)
-		if err == nil {
-			t.manger = obj
-		}
-	}
-	if t.manger == nil {
-		t.manger = &UserManger{
-			Users:    make([]string, 1),
-			Sellers:  make([]string, 1),
-			LogIndex: 0,
-		}
-		t.manger.save(stub)
-	}
-	t.debug = false
-	_, args := stub.GetFunctionAndParameters()
-	for _, v := range args {
-		if v == "debug" {
-			t.debug = true
-		}
-	}
-	return shim.Success(nil)
+	fmt.Println("init")
+	NewManger(stub)
+	return shim.Success([]byte("init ok"))
 }
 
 func (t *CoinChaincode) Invoke(stub shim.ChaincodeStubInterface) pb.Response {
+	fmt.Println("Invoke")
 	function, args := stub.GetFunctionAndParameters()
+	fmt.Println("Invoke ", function, args[0])
 	switch function {
 	case "adduser":
 		return t.addUser(stub, args)
@@ -60,8 +43,8 @@ func (t *CoinChaincode) Invoke(stub shim.ChaincodeStubInterface) pb.Response {
 	}
 }
 
-func (t *CoinChaincode) checkSignature(args string, sig string, key string) error {
-	if t.debug {
+func (t *CoinChaincode) checkSignature(args string, sig string, key string, stub shim.ChaincodeStubInterface) error {
+	if DEBUG {
 		return nil
 	}
 	pkbuf, err := base64.StdEncoding.DecodeString(key)
@@ -92,12 +75,12 @@ func (t *CoinChaincode) addUser(stub shim.ChaincodeStubInterface, args []string)
 		return shim.Error("Incorrect arguments. detail:" + err.Error())
 	}
 
-	err = t.checkSignature(args[0], args[1], req.PublickKey)
+	err = t.checkSignature(args[0], args[1], req.PublickKey, stub)
 	if err != nil {
 		return shim.Error("check signature failed,detail:" + err.Error())
 	}
-
-	buf, err := t.manger.AddUser(req.PublickKey, stub)
+	manger := NewManger(stub)
+	buf, err := manger.AddUser(req.PublickKey, stub)
 	if err != nil {
 		return shim.Error(err.Error())
 	}
@@ -116,16 +99,17 @@ func (t *CoinChaincode) getUser(stub shim.ChaincodeStubInterface, args []string)
 		return shim.Error("Incorrect arguments. detail:" + err.Error())
 	}
 
-	Caller := t.manger.getUser(req.CallID, stub)
+	manger := NewManger(stub)
+	Caller := manger.getUser(req.CallID, stub)
 	if Caller == nil {
 		return shim.Error("Incorrect arguments. detail:" + " Get Caller failed id=" + req.CallID)
 	}
 
-	err = t.checkSignature(args[0], args[1], Caller.PubKey)
+	err = t.checkSignature(args[0], args[1], Caller.PubKey, stub)
 	if err != nil {
 		return shim.Error("check signature failed,detail:" + err.Error())
 	}
-	buf, err := t.manger.GetUser(req.UserID, stub)
+	buf, err := manger.GetUser(req.UserID, stub)
 	if err != nil {
 		return shim.Error(err.Error())
 	}
@@ -144,16 +128,18 @@ func (t *CoinChaincode) upgradeUser(stub shim.ChaincodeStubInterface, args []str
 		return shim.Error("Incorrect arguments. detail:" + err.Error())
 	}
 
-	Caller := t.manger.getUser(req.CallID, stub)
+	manger := NewManger(stub)
+
+	Caller := manger.getUser(req.CallID, stub)
 	if Caller == nil {
 		return shim.Error("Incorrect arguments. detail:" + " Get Caller failed id=" + req.CallID)
 	}
 
-	err = t.checkSignature(args[0], args[1], Caller.PubKey)
+	err = t.checkSignature(args[0], args[1], Caller.PubKey, stub)
 	if err != nil {
 		return shim.Error("check signature failed,detail:" + err.Error())
 	}
-	err = t.manger.UpgradeUser(Caller, req.UserID, req.Limit, stub)
+	err = manger.UpgradeUser(Caller, req.UserID, req.Limit, stub)
 	if err != nil {
 		return shim.Error(err.Error())
 	}
@@ -171,17 +157,17 @@ func (t *CoinChaincode) sendTranscation(stub shim.ChaincodeStubInterface, args [
 	if err != nil {
 		return shim.Error("Incorrect arguments. detail:" + err.Error())
 	}
-
-	Caller := t.manger.getUser(req.CallID, stub)
+	manger := NewManger(stub)
+	Caller := manger.getUser(req.CallID, stub)
 	if Caller == nil {
 		return shim.Error("Incorrect arguments. detail:" + " Get Caller failed id=" + req.CallID)
 	}
 
-	err = t.checkSignature(args[0], args[1], Caller.PubKey)
+	err = t.checkSignature(args[0], args[1], Caller.PubKey, stub)
 	if err != nil {
 		return shim.Error("check signature failed,detail:" + err.Error())
 	}
-	err = t.manger.Send(Caller, req.ToUser, req.Coin, stub)
+	err = manger.Send(Caller, req.ToUser, req.Coin, stub)
 	if err != nil {
 		return shim.Error(err.Error())
 	}
