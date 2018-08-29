@@ -10,6 +10,7 @@ import (
 	"github.com/hyperledger/fabric-sdk-go/pkg/fabsdk"
 	"io/ioutil"
 	"log"
+	"strconv"
 	"time"
 )
 
@@ -101,7 +102,7 @@ func (o *AppRunner) callInvoke(configOpt core.ConfigProvider, conf *AppConfig, a
 		log.Println("Failed to create new channel client: ", err)
 		return "", err
 	}
-	eventID := "callCC([a-zA-Z]+)"
+	eventID := strconv.Itoa(time.Now().Unix())
 	// Register chaincode event (pass in channel which receives event details when the event is complete)
 	reg, notifier, err := client.RegisterChaincodeEvent(conf.ChainCode, eventID)
 	if err != nil {
@@ -110,13 +111,14 @@ func (o *AppRunner) callInvoke(configOpt core.ConfigProvider, conf *AppConfig, a
 	}
 	defer client.UnregisterChaincodeEvent(reg)
 
-	txArgs := [][]byte{[]byte(args[0]), []byte(args[1]), []byte(args[2])}
-	_, err = client.Execute(channel.Request{ChaincodeID: conf.ChainCode, Fcn: "invoke", Args: txArgs},
+	txArgs := [][]byte{[]byte(args[1]), []byte(args[2])}
+	rep, err := client.Execute(channel.Request{ChaincodeID: conf.ChainCode, Fcn: args[0], Args: txArgs},
 		channel.WithRetry(retry.DefaultChannelOpts))
 	if err != nil {
 		log.Printf("Failed to call:%s %s\n", args[0], err)
 		return "", err
 	}
+	log.Printf("Received CC event: %#v\n", rep)
 
 	select {
 	case ccEvent := <-notifier:
