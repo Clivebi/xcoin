@@ -1,4 +1,5 @@
 
+
 checkout https://github.com/Clivebi/xcoin 到
 $GOAPTH/src/github.com/hyperledger/
 

@@ -89,6 +89,7 @@ func (s *CoinServer) ServerHttp() {
 	server.Handler = s
 	server.ReadTimeout = 20 * time.Second
 	server.WriteTimeout = 20 * time.Second
+	fmt.Println("working on :" + server.Addr)
 	server.ListenAndServe()
 }
 
