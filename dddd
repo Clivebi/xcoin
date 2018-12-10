@@ -1,0 +1,11 @@
+server:
+sudo ip link add dev wg0 type wireguard
+sudo ip addr add 10.1.0.1/24 dev wg0
+sudo wg set wg0 listen-port 51820 private-key ./privatekey
+sudo ip link set wg0 up
+sudo wg set wg0 peer BYQ7pCMweystYE8qLk1TElnmqqATCb8soPlFP6CdU18= allowed-ips 10.1.0.2/32
+
+sudo iptables -A FORWARD -i enp0s3 -o wg0 -m state --state ESTABLISHED,RELATED -j ACCEPT
+sudo iptables -A FORWARD -s 10.1.0.1/24 -o enp0s3 -j ACCEPT
+sudo iptables -t nat -A POSTROUTING -s 10.1.0.1/24 -o enp0s3 -j MASQUERADE
+
