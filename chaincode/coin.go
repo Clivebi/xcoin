@@ -1,15 +1,11 @@
 package main
 
 import (
-	"crypto"
-	"crypto/rsa"
-	"crypto/sha256"
-	"crypto/x509"
-	"encoding/base64"
-	"encoding/json"
+	_ "encoding/json"
 	"fmt"
 	"github.com/hyperledger/fabric/core/chaincode/shim"
 	pb "github.com/hyperledger/fabric/protos/peer"
+	"strconv"
 )
 
 const (
@@ -21,7 +17,8 @@ type CoinChaincode struct {
 
 func (t *CoinChaincode) Init(stub shim.ChaincodeStubInterface) pb.Response {
 	fmt.Println("init")
-	NewManger(stub)
+	GetBankManger(stub)
+	GetUserManger(stub)
 	return shim.Success([]byte("init ok"))
 }
 
@@ -30,148 +27,254 @@ func (t *CoinChaincode) Invoke(stub shim.ChaincodeStubInterface) pb.Response {
 	function, args := stub.GetFunctionAndParameters()
 	fmt.Println("Invoke ", function, args[0])
 	switch function {
+	case "addbank":
+		return t.addBank(stub, args)
+	case "addbanklimit":
+		return t.addBankAmount(stub, args)
+	case "getbank":
+		return t.getBankInfomation(stub, args)
 	case "adduser":
 		return t.addUser(stub, args)
 	case "getuser":
 		return t.getUser(stub, args)
-	case "upgradeuser":
-		return t.upgradeUser(stub, args)
-	case "send":
-		return t.sendTranscation(stub, args)
+	case "cashin":
+		return t.cashIn(stub, args)
+	case "cashout":
+		return t.cashout(stub, args)
+	case "transfer":
+		return t.cashout(stub, args)
+	case "issue":
+		return t.issue(stub, args)
 	default:
 		return shim.Error("invalid function:" + function)
 	}
 }
 
-func (t *CoinChaincode) checkSignature(args string, sig string, key string, stub shim.ChaincodeStubInterface) error {
-	if DEBUG {
-		return nil
+func (t *CoinChaincode) addBank(stub shim.ChaincodeStubInterface, args []string) pb.Response {
+	//arg:[bankname,currency,chip,exchanger]
+	if len(args) != 4 {
+		return shim.Error("Incorrect number of arguments. Expecting 4")
 	}
-	pkbuf, err := base64.StdEncoding.DecodeString(key)
+	mgr := GetBankManger(stub)
+	item := BankItem{
+		BankName:  args[0],
+		Currency:  args[1],
+		Chip:      args[2],
+		Exchanger: args[3],
+	}
+	err := mgr.addBank(stub, item)
 	if err != nil {
-		return err
+		return shim.Error(err.Error())
 	}
-	pk, err := x509.ParsePKCS1PublicKey(pkbuf)
+	defer mgr.save(stub)
+	umgr := GetUserManger(stub)
+
+	_, err = umgr.addUser(item.Exchanger, item.BankName, 2, stub)
 	if err != nil {
-		return err
+		return shim.Error(err.Error())
 	}
-	signature, err := base64.StdEncoding.DecodeString(sig)
+	defer umgr.save(stub)
+	return shim.Success([]byte{})
+}
+
+func (t *CoinChaincode) addBankAmount(stub shim.ChaincodeStubInterface, args []string) pb.Response {
+	//arg:[bankname,addvalue]
+	if len(args) != 2 {
+		return shim.Error("Incorrect number of arguments. Expecting 2")
+	}
+	value, err := strconv.Atoi(args[1])
 	if err != nil {
-		return err
+		return shim.Error(err.Error())
 	}
-	hashed := sha256.Sum256([]byte(args))
-	return rsa.VerifyPKCS1v15(pk, crypto.SHA256, hashed[:], signature)
+	mgr := GetBankManger(stub)
+	bank, err := mgr.lookupBankByName(args[0])
+	if err != nil {
+		return shim.Error(err.Error())
+	}
+	bank.TotalAmount += value
+	mgr.save(stub)
+	return shim.Success(bank.ToBuffer())
+}
+
+func (t *CoinChaincode) getBankInfomation(stub shim.ChaincodeStubInterface, args []string) pb.Response {
+	//arg: [bankname]
+	if len(args) != 1 {
+		return shim.Error("Incorrect number of arguments. Expecting 1")
+	}
+	mgr := GetBankManger(stub)
+	bank, err := mgr.lookupBankByName(args[0])
+	if err != nil {
+		return shim.Error(err.Error())
+	}
+	return shim.Success(bank.ToBuffer())
 }
 
 func (t *CoinChaincode) addUser(stub shim.ChaincodeStubInterface, args []string) pb.Response {
-	if len(args) != 2 {
-		return shim.Error("Incorrect number of arguments. Expecting 2")
+	//arg:[username,bankname,type]
+	if len(args) != 3 {
+		return shim.Error("Incorrect number of arguments. Expecting 3")
 	}
-
-	req := &AddUserOffer{}
-
-	err := json.Unmarshal([]byte(args[0]), req)
-	if err != nil {
-		return shim.Error("Incorrect arguments. detail:" + err.Error())
-	}
-
-	err = t.checkSignature(args[0], args[1], req.PublickKey, stub)
-	if err != nil {
-		return shim.Error("check signature failed,detail:" + err.Error())
-	}
-	manger := NewManger(stub)
-	buf, err := manger.AddUser(req.PublickKey, stub)
+	mgr := GetBankManger(stub)
+	_, err := mgr.lookupBankByName(args[1])
 	if err != nil {
 		return shim.Error(err.Error())
 	}
-	return shim.Success(buf)
+	umgr := GetUserManger(stub)
+	uType := 1
+	if args[2] == "2" {
+		uType = 2
+	}
+	item, err := umgr.addUser(args[0], args[1], uType, stub)
+	if err != nil {
+		return shim.Error(err.Error())
+	}
+	umgr.save(stub)
+	return shim.Success(item.ToBuffer())
 }
 
 func (t *CoinChaincode) getUser(stub shim.ChaincodeStubInterface, args []string) pb.Response {
-	if len(args) != 2 {
-		return shim.Error("Incorrect number of arguments. Expecting 2")
+	//arg:[username]
+	if len(args) != 1 {
+		return shim.Error("Incorrect number of arguments. Expecting 1")
 	}
-
-	req := &GetUserOffser{}
-
-	err := json.Unmarshal([]byte(args[0]), req)
-	if err != nil {
-		return shim.Error("Incorrect arguments. detail:" + err.Error())
+	umgr := GetUserManger(stub)
+	user := umgr.getUser(args[0], stub)
+	if user == nil {
+		return shim.Error("user name not found:" + args[0])
 	}
-
-	manger := NewManger(stub)
-	Caller := manger.getUser(req.CallID, stub)
-	if Caller == nil {
-		return shim.Error("Incorrect arguments. detail:" + " Get Caller failed id=" + req.CallID)
-	}
-
-	err = t.checkSignature(args[0], args[1], Caller.PubKey, stub)
-	if err != nil {
-		return shim.Error("check signature failed,detail:" + err.Error())
-	}
-	buf, err := manger.GetUser(req.UserID, stub)
-	if err != nil {
-		return shim.Error(err.Error())
-	}
-	return shim.Success(buf)
+	return shim.Success(user.ToBuffer())
 }
 
-func (t *CoinChaincode) upgradeUser(stub shim.ChaincodeStubInterface, args []string) pb.Response {
-	if len(args) != 2 {
-		return shim.Error("Incorrect number of arguments. Expecting 2")
+func (t *CoinChaincode) cashIn(stub shim.ChaincodeStubInterface, args []string) pb.Response {
+	//arg: [username,currency,amount]
+	if len(args) != 3 {
+		return shim.Error("Incorrect number of arguments. Expecting 3")
 	}
-
-	req := &UpgradeUserOffser{}
-
-	err := json.Unmarshal([]byte(args[0]), req)
-	if err != nil {
-		return shim.Error("Incorrect arguments. detail:" + err.Error())
-	}
-
-	manger := NewManger(stub)
-
-	Caller := manger.getUser(req.CallID, stub)
-	if Caller == nil {
-		return shim.Error("Incorrect arguments. detail:" + " Get Caller failed id=" + req.CallID)
-	}
-
-	err = t.checkSignature(args[0], args[1], Caller.PubKey, stub)
-	if err != nil {
-		return shim.Error("check signature failed,detail:" + err.Error())
-	}
-	err = manger.UpgradeUser(Caller, req.UserID, req.Limit, stub)
+	value, err := strconv.Atoi(args[2])
 	if err != nil {
 		return shim.Error(err.Error())
 	}
-	return shim.Success(nil)
+	umgr := GetUserManger(stub)
+	user := umgr.getUser(args[0], stub)
+	if user == nil {
+		return shim.Error("user name not found:" + args[0])
+	}
+	mgr := GetBankManger(stub)
+	_, err = mgr.lookupBankByCurrency(args[1])
+	if err != nil {
+		return shim.Error(err.Error())
+	}
+	err = user.increaseBalance(args[1], value, stub)
+	if err != nil {
+		return shim.Error(err.Error())
+	}
+	return shim.Success(user.ToBuffer())
 }
 
-func (t *CoinChaincode) sendTranscation(stub shim.ChaincodeStubInterface, args []string) pb.Response {
-	if len(args) != 2 {
-		return shim.Error("Incorrect number of arguments. Expecting 2")
+func (t *CoinChaincode) issue(stub shim.ChaincodeStubInterface, args []string) pb.Response {
+	//arg: [bankname,username,currency,amount]
+	if len(args) != 4 {
+		return shim.Error("Incorrect number of arguments. Expecting 4")
 	}
-
-	req := &SendTranscationOffser{}
-
-	err := json.Unmarshal([]byte(args[0]), req)
-	if err != nil {
-		return shim.Error("Incorrect arguments. detail:" + err.Error())
-	}
-	manger := NewManger(stub)
-	Caller := manger.getUser(req.CallID, stub)
-	if Caller == nil {
-		return shim.Error("Incorrect arguments. detail:" + " Get Caller failed id=" + req.CallID)
-	}
-
-	err = t.checkSignature(args[0], args[1], Caller.PubKey, stub)
-	if err != nil {
-		return shim.Error("check signature failed,detail:" + err.Error())
-	}
-	err = manger.Send(Caller, req.ToUser, req.Coin, stub)
+	value, err := strconv.Atoi(args[3])
 	if err != nil {
 		return shim.Error(err.Error())
 	}
-	return shim.Success(nil)
+	umgr := GetUserManger(stub)
+	user := umgr.getUser(args[1], stub)
+	if user == nil {
+		return shim.Error("user name not found:" + args[1])
+	}
+	mgr := GetBankManger(stub)
+	bank, err := mgr.lookupBankByName(args[0])
+	if err != nil {
+		return shim.Error(err.Error())
+	}
+	if bank.Currency != args[2] {
+		return shim.Error("bankname and currency not match")
+	}
+	//额度不够
+	if bank.TotalAmount < value {
+		return shim.Error("bank limit overflow")
+	}
+	err = user.decreaseBalance(bank.Currency, value, stub)
+	if err != nil { //透支
+		return shim.Error(err.Error())
+	}
+	err = user.increaseBalance(bank.Chip, value, stub)
+	if err != nil {
+		user.increaseBalance(bank.Currency, value, stub)
+		return shim.Error(err.Error())
+	}
+	bank.UsedAmount += value
+	bank.TotalAmount -= value
+	mgr.save(stub)
+	return shim.Success(user.ToBuffer())
+}
+
+func (t *CoinChaincode) cashout(stub shim.ChaincodeStubInterface, args []string) pb.Response {
+	//arg: [username,bankname,fromcurrency,dstcurrency,amount]
+	if len(args) != 5 {
+		return shim.Error("Incorrect number of arguments. Expecting 5")
+	}
+	value, err := strconv.Atoi(args[4])
+	if err != nil {
+		return shim.Error(err.Error())
+	}
+	umgr := GetUserManger(stub)
+	user := umgr.getUser(args[0], stub)
+	if user == nil {
+		return shim.Error("user name not found:" + args[0])
+	}
+	mgr := GetBankManger(stub)
+	bank, err := mgr.lookupBankByCurrency(args[1])
+	if err != nil {
+		return shim.Error(err.Error())
+	}
+	if bank.Currency != args[2] {
+		return shim.Error("bankname and currency not match")
+	}
+	if args[2] == args[3] { //同currency 提现，
+		err = user.decreaseBalance(bank.Currency, value, stub)
+		if err != nil {
+			return shim.Error(err.Error())
+		}
+		return shim.Success(user.ToBuffer())
+	} else { //用USD 提取HKD？
+		return shim.Error("cashout " + args[2] + "==>" + args[3] + " not implement")
+	}
+	return shim.Success(user.ToBuffer())
+}
+
+func (t *CoinChaincode) transfer(stub shim.ChaincodeStubInterface, args []string) pb.Response {
+	//arg: [fromuser,touser,currency,amount]
+	if len(args) != 4 {
+		return shim.Error("Incorrect number of arguments. Expecting 4")
+	}
+	value, err := strconv.Atoi(args[3])
+	if err != nil {
+		return shim.Error(err.Error())
+	}
+	umgr := GetUserManger(stub)
+	fromuser := umgr.getUser(args[0], stub)
+	if fromuser == nil {
+		return shim.Error("user name not found:" + args[0])
+	}
+	touser := umgr.getUser(args[1], stub)
+	if touser == nil {
+		return shim.Error("user name not found:" + args[1])
+	}
+
+	err = fromuser.decreaseBalance(args[2], value, stub)
+	if err != nil {
+		return shim.Error(err.Error())
+	}
+	err = touser.increaseBalance(args[2], value, stub)
+	if err != nil {
+		fromuser.increaseBalance(args[2], value, stub)
+		return shim.Error(err.Error())
+	}
+	return shim.Success(fromuser.ToBuffer())
 }
 
 func main() {
