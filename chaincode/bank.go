@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"github.com/hyperledger/fabric/core/chaincode/shim"
+	"strings"
 )
 
 const (
@@ -12,7 +13,7 @@ const (
 
 type BankItem struct {
 	BankName    string `json:"bankname"`
-	Currency    string `json:"currenty"`
+	Currency    string `json:"currency"`
 	Chip        string `json:"chip"`
 	TotalAmount int    `json:"totalamount"`
 	UsedAmount  int    `json:"usedamount"`
@@ -28,7 +29,8 @@ func (o BankItem) ToBuffer() []byte {
 }
 
 type BankManger struct {
-	Banks []*BankItem
+	Banks    []*BankItem
+	UsedKeys string
 }
 
 func (o BankManger) ToBuffer() []byte {
@@ -52,6 +54,38 @@ func GetBankManger(stub shim.ChaincodeStubInterface) *BankManger {
 
 func (o *BankManger) save(stub shim.ChaincodeStubInterface) error {
 	return stub.PutState(KEY_BANK_MANGER, o.ToBuffer())
+}
+
+//以下两接口检查命名冲突和添加命名
+func (o *BankManger) checkUsedKeys(bank BankItem) error {
+	key := "|" + bank.BankName + "|"
+	if strings.Contains(o.UsedKeys, key) {
+		return errors.New("bank name used:" + bank.BankName)
+	}
+	key = "|" + bank.Chip + "|"
+	if strings.Contains(o.UsedKeys, key) {
+		return errors.New("chip name used:" + bank.Chip)
+	}
+	key = "|" + bank.Currency + "|"
+	if strings.Contains(o.UsedKeys, key) {
+		return errors.New("currency used:" + bank.Currency)
+	}
+	key = "|" + bank.Exchanger + "|"
+	if strings.Contains(o.UsedKeys, key) {
+		return errors.New("exchanger name used:" + bank.Exchanger)
+	}
+	return nil
+}
+
+func (o *BankManger) addUsedKeys(bank BankItem) {
+	key := "|" + bank.BankName + "|"
+	key += bank.Chip
+	key += "|"
+	key += bank.Currency
+	key += "|"
+	key += bank.Exchanger
+	key += "|"
+	o.UsedKeys += key
 }
 
 func (o *BankManger) lookupBankByCurrency(currency string) (*BankItem, error) {
@@ -91,21 +125,8 @@ func (o *BankManger) lookupBankByExchanger(name string) (*BankItem, error) {
 }
 
 func (o *BankManger) addBank(stub shim.ChaincodeStubInterface, item BankItem) error {
-	_, err := o.lookupBankByCurrency(item.Currency)
-	if err == nil {
-		return errors.New("Currency exist")
-	}
-	_, err = o.lookupBankByName(item.BankName)
-	if err == nil {
-		return errors.New("bank name exist")
-	}
-	_, err = o.lookupBankByChip(item.Chip)
-	if err == nil {
-		return errors.New("chip name exist")
-	}
-	_, err = o.lookupBankByExchanger(item.Exchanger)
-	if err == nil {
-		return errors.New("exchanger name exist")
+	if err := o.checkUsedKeys(item); err != nil {
+		return err
 	}
 	nit := &BankItem{
 		BankName:    item.BankName,
@@ -116,5 +137,6 @@ func (o *BankManger) addBank(stub shim.ChaincodeStubInterface, item BankItem) er
 		Exchanger:   item.Exchanger,
 	}
 	o.Banks = append(o.Banks, nit)
+	o.addUsedKeys(item)
 	return o.save(stub)
 }

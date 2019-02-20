@@ -1,10 +1,6 @@
 package main
 
 import (
-	"crypto/rand"
-	"crypto/rsa"
-	"crypto/x509"
-	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"github.com/hyperledger/xcoin/proxy"
@@ -25,19 +21,19 @@ func (s *CoinServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		r.PostForm = make(url.Values)
 		buf, err := ioutil.ReadAll(r.Body)
 		if err != nil {
-			http.NotFound(w, r)
+			http.Error(w, err.Error(), 500)
 			log.Println("read json body failed", err)
 			return
 		}
 		if buf == nil || len(buf) == 0 {
-			http.NotFound(w, r)
+			http.Error(w, err.Error(), 500)
 			log.Println("read json body failed", err)
 			return
 		}
 		ret := make(map[string]string)
 		err = json.Unmarshal(buf, &ret)
 		if err != nil {
-			http.NotFound(w, r)
+			http.Error(w, err.Error(), 500)
 			log.Println("Unmarshal json failed", err)
 			return
 		}
@@ -49,38 +45,8 @@ func (s *CoinServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		r.ParseForm()
 	}
 	w.Header().Add("connection", "close")
-	if r.URL.EscapedPath() == "/keyen.do" {
-		resp := make(map[string]string)
-		key, _ := rsa.GenerateKey(rand.Reader, 2048)
-		pkKey := key.Public().(*rsa.PublicKey)
-		buf := x509.MarshalPKCS1PrivateKey(key)
-		resp["privatekey"] = base64.StdEncoding.EncodeToString(buf)
-		buf = x509.MarshalPKCS1PublicKey(pkKey)
-		resp["pubkey"] = base64.StdEncoding.EncodeToString(buf)
-		buf, _ = json.Marshal(resp)
-		w.Write(buf)
-		return
-	} else if r.URL.EscapedPath() == "/call.do" {
-		fc := r.FormValue("func")
-		args := r.FormValue("args")
-		sig := r.FormValue("signature")
-		if len(fc) == 0 || len(args) == 0 || len(sig) == 0 {
-			w.Write([]byte("invalid parameter"))
-			return
-		}
-		obj := make(map[string]interface{})
-		err := json.Unmarshal([]byte(args), &obj)
-		if err != nil {
-			w.Write([]byte("args is not json "))
-			return
-		}
-		args_array := []string{fc, args, sig}
-		w.Write([]byte(s.runner.SendRequest(args_array)))
-		return
-	} else {
-		http.NotFound(w, r)
-		return
-	}
+	handler := proxy.NewAPIHandler(s.runner)
+	handler.DispatchRequest(w, r)
 }
 
 func (s *CoinServer) ServerHttp() {

@@ -10,21 +10,34 @@ import (
 	"io/ioutil"
 )
 
-func response(rsp string, err error) string {
-	ret := make(map[string]string)
-	if err != nil {
-		ret["error"] = err.Error()
-	} else {
-		ret["error"] = "ok"
-		ret["data"] = rsp
+type Response struct {
+	Status       int    `json:"status"`
+	ErrorMessage string `json:"errmsg"`
+	TxID         string `json:"txid"`
+	TxValidCode  string `json:"valid_code"`
+	Payload      string `json:"data"`
+}
+
+func getResponse(payload string, txID string, Code string, err error) []byte {
+	rsp := &Response{
+		Status:       200,
+		ErrorMessage: "sucess",
+		TxID:         txID,
+		TxValidCode:  Code,
+		Payload:      payload,
 	}
-	buf, _ := json.Marshal(ret)
-	return string(buf)
+	if err != nil {
+		rsp.Status = 500
+		rsp.ErrorMessage = err.Error()
+	}
+	buf, _ := json.Marshal(rsp)
+	return buf
 }
 
 type request struct {
-	args   []string
-	result chan string
+	function string
+	args     []string
+	result   chan []byte
 }
 
 type AppRunner struct {
@@ -55,10 +68,11 @@ func (o *AppRunner) Close() {
 	}
 }
 
-func (o *AppRunner) SendRequest(args []string) string {
+func (o *AppRunner) SendRequest(function string, args []string) []byte {
 	req := &request{
-		args:   args,
-		result: make(chan string),
+		args:     args,
+		function: function,
+		result:   make(chan []byte),
 	}
 	o.queue <- req
 	ret := <-req.result
@@ -72,7 +86,7 @@ func (o *AppRunner) messageloop() {
 		if req == nil {
 			break
 		}
-		req.result <- response(o.callCC(req.args))
+		req.result <- o.callCC(req.function, req.args)
 	}
 }
 
@@ -111,21 +125,22 @@ func (o *AppRunner) initClient() error {
 	return nil
 }
 
-func (o *AppRunner) callCC(args []string) (string, error) {
-	if len(args) != 3 {
-		return "", errors.New("invalid parameters")
-	}
+func (o *AppRunner) callCC(function string, args []string) []byte {
+	var err error = nil
 	if o.client == nil {
-		err := o.initClient()
+		err = o.initClient()
 		if err != nil {
-			return "", err
+			return getResponse("", "", "", err)
 		}
 	}
-	txArgs := [][]byte{[]byte(args[1]), []byte(args[2])}
-	rep, err := o.client.Execute(channel.Request{ChaincodeID: o.conf.ChainCode, Fcn: args[0], Args: txArgs},
+	txArgs := make([][]byte, len(args))
+	for i, v := range args {
+		txArgs[i] = []byte(v)
+	}
+	rep, err := o.client.Execute(channel.Request{ChaincodeID: o.conf.ChainCode, Fcn: function, Args: txArgs},
 		channel.WithRetry(retry.DefaultChannelOpts))
 	if err != nil {
-		return "", errors.New("failed to call " + args[0] + " error:" + err.Error())
+		return getResponse("", "", "", errors.New("failed to call "+args[0]+" error:"+err.Error()))
 	}
-	return string(rep.Payload), nil
+	return getResponse(string(rep.Payload), string(rep.TransactionID), rep.TxValidationCode.String(), nil)
 }

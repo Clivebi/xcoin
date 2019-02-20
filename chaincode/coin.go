@@ -31,6 +31,8 @@ func (t *CoinChaincode) Invoke(stub shim.ChaincodeStubInterface) pb.Response {
 		return t.addBank(stub, args)
 	case "addbanklimit":
 		return t.addBankAmount(stub, args)
+	case "chippay":
+		return t.chipPay(stub, args)
 	case "getbank":
 		return t.getBankInfomation(stub, args)
 	case "adduser":
@@ -171,6 +173,45 @@ func (t *CoinChaincode) cashIn(stub shim.ChaincodeStubInterface, args []string) 
 	return shim.Success(user.ToBuffer())
 }
 
+func (t *CoinChaincode) chipPay(stub shim.ChaincodeStubInterface, args []string) pb.Response {
+	//arg: [bankname,username,currency,amount,islocked]
+	if len(args) != 5 {
+		return shim.Error("Incorrect number of arguments. Expecting 5")
+	}
+	value, err := strconv.Atoi(args[3])
+	if err != nil {
+		return shim.Error(err.Error())
+	}
+	umgr := GetUserManger(stub)
+	user := umgr.getUser(args[1], stub)
+	if user == nil {
+		return shim.Error("user name not found:" + args[1])
+	}
+	mgr := GetBankManger(stub)
+	bank, err := mgr.lookupBankByName(args[0])
+	if err != nil {
+		return shim.Error(err.Error())
+	}
+	if bank.Chip != args[2] {
+		return shim.Error("You can ony use :" + bank.Chip + " on " + bank.BankName)
+	}
+	if args[4] == "true" {
+		err = user.decreaseLockedBalance(bank.Chip, value, stub)
+		if err != nil { //透支
+			return shim.Error(err.Error())
+		}
+	} else {
+		err = user.decreaseBalance(bank.Chip, value, stub)
+		if err != nil { //透支
+			return shim.Error(err.Error())
+		}
+	}
+	bank.UsedAmount -= value
+	bank.TotalAmount += value
+	mgr.save(stub)
+	return shim.Success(user.ToBuffer())
+}
+
 func (t *CoinChaincode) issue(stub shim.ChaincodeStubInterface, args []string) pb.Response {
 	//arg: [bankname,username,currency,amount]
 	if len(args) != 4 {
@@ -247,9 +288,9 @@ func (t *CoinChaincode) cashout(stub shim.ChaincodeStubInterface, args []string)
 }
 
 func (t *CoinChaincode) transfer(stub shim.ChaincodeStubInterface, args []string) pb.Response {
-	//arg: [fromuser,touser,currency,amount]
-	if len(args) != 4 {
-		return shim.Error("Incorrect number of arguments. Expecting 4")
+	//arg: [fromuser,touser,currency,amount,islocked]
+	if len(args) != 5 {
+		return shim.Error("Incorrect number of arguments. Expecting 5")
 	}
 	value, err := strconv.Atoi(args[3])
 	if err != nil {
@@ -264,15 +305,26 @@ func (t *CoinChaincode) transfer(stub shim.ChaincodeStubInterface, args []string
 	if touser == nil {
 		return shim.Error("user name not found:" + args[1])
 	}
-
-	err = fromuser.decreaseBalance(args[2], value, stub)
-	if err != nil {
-		return shim.Error(err.Error())
-	}
-	err = touser.increaseBalance(args[2], value, stub)
-	if err != nil {
-		fromuser.increaseBalance(args[2], value, stub)
-		return shim.Error(err.Error())
+	if args[4] == "true" {
+		err = fromuser.decreaseLockedBalance(args[2], value, stub)
+		if err != nil {
+			return shim.Error(err.Error())
+		}
+		err = touser.increaseLockedBalance(args[2], value, stub)
+		if err != nil {
+			fromuser.increaseLockedBalance(args[2], value, stub)
+			return shim.Error(err.Error())
+		}
+	} else {
+		err = fromuser.decreaseBalance(args[2], value, stub)
+		if err != nil {
+			return shim.Error(err.Error())
+		}
+		err = touser.increaseBalance(args[2], value, stub)
+		if err != nil {
+			fromuser.increaseBalance(args[2], value, stub)
+			return shim.Error(err.Error())
+		}
 	}
 	return shim.Success(fromuser.ToBuffer())
 }
