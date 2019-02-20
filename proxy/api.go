@@ -15,25 +15,25 @@ func NewAPIHandler(runner *AppRunner) *APIHandler {
 
 func (o *APIHandler) DispatchRequest(w http.ResponseWriter, r *http.Request) {
 	switch r.URL.EscapedPath() {
-	case "createbank":
+	case "/createbank":
 		o.handle_createbank(w, r)
-	case "getbank":
+	case "/getbank":
 		o.handle_getbank(w, r)
-	case "changebanklimit":
+	case "/changebanklimit":
 		o.handle_changebanklimit(w, r)
-	case "adduser":
+	case "/adduser":
 		o.handle_adduser(w, r)
-	case "getuser":
+	case "/getuser":
 		o.handle_getuser(w, r)
-	case "issue":
+	case "/issue":
 		o.handle_issue(w, r)
-	case "chippay":
+	case "/chippay":
 		o.handle_chippay(w, r)
-	case "cashin":
+	case "/cashin":
 		o.handle_cashin(w, r)
-	case "cashout":
+	case "/cashout":
 		o.handle_cashout(w, r)
-	case "transfer":
+	case "/transfer":
 		o.handle_transfer(w, r)
 	default:
 		http.Error(w, "invalid URL", 500)

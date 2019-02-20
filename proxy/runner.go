@@ -11,20 +11,22 @@ import (
 )
 
 type Response struct {
-	Status       int    `json:"status"`
-	ErrorMessage string `json:"errmsg"`
-	TxID         string `json:"txid"`
-	TxValidCode  string `json:"valid_code"`
-	Payload      string `json:"data"`
+	Status       int                    `json:"status"`
+	ErrorMessage string                 `json:"errmsg"`
+	TxID         string                 `json:"txid"`
+	TxValidCode  string                 `json:"valid_code"`
+	Payload      map[string]interface{} `json:"data"`
 }
 
 func getResponse(payload string, txID string, Code string, err error) []byte {
+	var data map[string]interface{}
+	json.Unmarshal([]byte(payload), &data)
 	rsp := &Response{
 		Status:       200,
 		ErrorMessage: "sucess",
 		TxID:         txID,
 		TxValidCode:  Code,
-		Payload:      payload,
+		Payload:      data,
 	}
 	if err != nil {
 		rsp.Status = 500
@@ -140,7 +142,7 @@ func (o *AppRunner) callCC(function string, args []string) []byte {
 	rep, err := o.client.Execute(channel.Request{ChaincodeID: o.conf.ChainCode, Fcn: function, Args: txArgs},
 		channel.WithRetry(retry.DefaultChannelOpts))
 	if err != nil {
-		return getResponse("", "", "", errors.New("failed to call "+args[0]+" error:"+err.Error()))
+		return getResponse("", "", "", err.Error())
 	}
 	return getResponse(string(rep.Payload), string(rep.TransactionID), rep.TxValidationCode.String(), nil)
 }

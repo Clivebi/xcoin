@@ -6,7 +6,7 @@
 
 banker操作接口  
 创建. 
-createbank?bankname=bankA&currency=USD&chip=chipA&exchanger=ex_A  
+http://127.0.0.1:8789/createbank?bankname=bankA&currency=USD&chip=chipA&exchanger=ex_A  
 参数：bankname 	银行名  
  	 currency 	法币  
  	 chip 	  	Token名字  
@@ -16,12 +16,12 @@ createbank?bankname=bankA&currency=USD&chip=chipA&exchanger=ex_A
 
 
 查询  
-getbank?bankname=bankA  
+http://127.0.0.1:8789/getbank?bankname=bankA  
 参数：bankname 	银行名  
 返回值：银行的目前信息  
 
 调整（预支）资金池  
-userChangeThreshold?bankname=bankA&add_threshold=66  
+http://127.0.0.1:8789/changebanklimit?bankname=bankA&add_threshold=50000  
 参数：bankname 银行名  
 	 add_threshold 增加值  
 备注：预支资金池影响issue的功能，issue将会使用资金池里面的资金，如果资金不够，issue将会失败，刚创建的银行，资金池为0，需要进行首次调整才能正常使用issue功能  

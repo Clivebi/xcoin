@@ -64,7 +64,7 @@ func (t *CoinChaincode) addBank(stub shim.ChaincodeStubInterface, args []string)
 		Chip:      args[2],
 		Exchanger: args[3],
 	}
-	err := mgr.addBank(stub, item)
+	bank, err := mgr.addBank(stub, item)
 	if err != nil {
 		return shim.Error(err.Error())
 	}
@@ -76,7 +76,7 @@ func (t *CoinChaincode) addBank(stub shim.ChaincodeStubInterface, args []string)
 		return shim.Error(err.Error())
 	}
 	defer umgr.save(stub)
-	return shim.Success([]byte{})
+	return shim.Success(bank.ToBuffer())
 }
 
 func (t *CoinChaincode) addBankAmount(stub shim.ChaincodeStubInterface, args []string) pb.Response {

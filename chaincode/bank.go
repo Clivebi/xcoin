@@ -124,9 +124,9 @@ func (o *BankManger) lookupBankByExchanger(name string) (*BankItem, error) {
 	return nil, errors.New("bank not found")
 }
 
-func (o *BankManger) addBank(stub shim.ChaincodeStubInterface, item BankItem) error {
+func (o *BankManger) addBank(stub shim.ChaincodeStubInterface, item BankItem) (*BankItem, error) {
 	if err := o.checkUsedKeys(item); err != nil {
-		return err
+		return nil, err
 	}
 	nit := &BankItem{
 		BankName:    item.BankName,
@@ -138,5 +138,5 @@ func (o *BankManger) addBank(stub shim.ChaincodeStubInterface, item BankItem) er
 	}
 	o.Banks = append(o.Banks, nit)
 	o.addUsedKeys(item)
-	return o.save(stub)
+	return nit, o.save(stub)
 }
