@@ -86,29 +86,82 @@ func (o *APIHandler) handle_changebanklimit(w http.ResponseWriter, r *http.Reque
 }
 
 func (o *APIHandler) handle_adduser(w http.ResponseWriter, r *http.Request) {
-
+	names := []string{"username", "bankname", "usertype"}
+	args, err := o.copyArg(r, names)
+	if err != nil {
+		http.Error(w, err.Error(), 500)
+		return
+	}
+	buf := o.runner.SendRequest("adduser", args)
+	w.Write(buf)
 }
 
 func (o *APIHandler) handle_getuser(w http.ResponseWriter, r *http.Request) {
-
-}
-
-func (o *APIHandler) handle_issue(w http.ResponseWriter, r *http.Request) {
-
-}
-
-func (o *APIHandler) handle_chippay(w http.ResponseWriter, r *http.Request) {
-
+	names := []string{"username"}
+	args, err := o.copyArg(r, names)
+	if err != nil {
+		http.Error(w, err.Error(), 500)
+		return
+	}
+	buf := o.runner.SendRequest("getuser", args)
+	w.Write(buf)
 }
 
 func (o *APIHandler) handle_cashin(w http.ResponseWriter, r *http.Request) {
-
+	//arg: [username,currency,amount]
+	names := []string{"username", "currency", "amount"}
+	args, err := o.copyArg(r, names)
+	if err != nil {
+		http.Error(w, err.Error(), 500)
+		return
+	}
+	buf := o.runner.SendRequest("cashin", args)
+	w.Write(buf)
 }
 
 func (o *APIHandler) handle_cashout(w http.ResponseWriter, r *http.Request) {
+	//arg: [username,bankname,fromcurrency,dstcurrency,amount]
+	names := []string{"username", "bankname", "fromcurrency", "dstcurrency", "amount"}
+	args, err := o.copyArg(r, names)
+	if err != nil {
+		http.Error(w, err.Error(), 500)
+		return
+	}
+	buf := o.runner.SendRequest("cashout", args)
+	w.Write(buf)
+}
+func (o *APIHandler) handle_issue(w http.ResponseWriter, r *http.Request) {
+	//arg: [bankname,username,currency,amount]
+	names := []string{"bankname", "username", "currency", "amount"}
+	args, err := o.copyArg(r, names)
+	if err != nil {
+		http.Error(w, err.Error(), 500)
+		return
+	}
+	buf := o.runner.SendRequest("issue", args)
+	w.Write(buf)
+}
 
+func (o *APIHandler) handle_chippay(w http.ResponseWriter, r *http.Request) {
+	//arg: [bankname,username,currency,amount,islocked]
+	names := []string{"bankname", "username", "currency", "amount", "islocked"}
+	args, err := o.copyArg(r, names)
+	if err != nil {
+		http.Error(w, err.Error(), 500)
+		return
+	}
+	buf := o.runner.SendRequest("chippay", args)
+	w.Write(buf)
 }
 
 func (o *APIHandler) handle_transfer(w http.ResponseWriter, r *http.Request) {
-
+	//arg: [fromuser,touser,currency,amount,islocked]
+	names := []string{"fromuser", "touser", "currency", "amount", "islocked"}
+	args, err := o.copyArg(r, names)
+	if err != nil {
+		http.Error(w, err.Error(), 500)
+		return
+	}
+	buf := o.runner.SendRequest("transfer", args)
+	w.Write(buf)
 }
