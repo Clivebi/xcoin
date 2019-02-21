@@ -1,24 +1,31 @@
 package main
 
 import (
+	"crypto/md5"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"github.com/hyperledger/fabric/core/chaincode/shim"
 )
 
 const (
-	KEY_USER_MANGER = "user_manger_root"
+	keyUserManger      = "user_manger_root"
+	userTypeRoot       = 0
+	userTypeBankManger = 1
+	userTypeNormal     = 2
 )
 
-type UserItem struct {
-	UserName      string         `json:"name"`
-	BirthBankName string         `json:"bank"`
-	Type          int            `json:"type"`
+//UserItem 存储用户信息结构
+type userItem struct {
+	PublicKey     string         `json:"pub_key"`
+	ID            string         `json:"id"`
+	UserType      int            `json:"type"`
 	Balance       map[string]int `json:"balance"`
 	LockedBalance map[string]int `json:"lockedbalance"`
 }
 
-func (o UserItem) ToBuffer() []byte {
+// ToBuffer 序列化
+func (o userItem) toBuffer() []byte {
 	buf, err := json.Marshal(o)
 	if err != nil {
 		return []byte{}
@@ -26,16 +33,12 @@ func (o UserItem) ToBuffer() []byte {
 	return buf
 }
 
-func (o UserItem) IsSeller() bool {
-	return o.Type == 1
+func (o userItem) save(stub shim.ChaincodeStubInterface) error {
+	key := "members_" + o.ID
+	return stub.PutState(key, o.toBuffer())
 }
 
-func (o UserItem) save(stub shim.ChaincodeStubInterface) {
-	key := "members_" + o.UserName
-	stub.PutState(key, o.ToBuffer())
-}
-
-func (o *UserItem) increaseBalance(sym string, value int, stub shim.ChaincodeStubInterface) error {
+func (o *userItem) increaseBalance(sym string, value int, stub shim.ChaincodeStubInterface) error {
 	old := o.Balance[sym]
 	old += value
 	o.Balance[sym] = old
@@ -43,7 +46,7 @@ func (o *UserItem) increaseBalance(sym string, value int, stub shim.ChaincodeStu
 	return nil
 }
 
-func (o *UserItem) decreaseBalance(sym string, value int, stub shim.ChaincodeStubInterface) error {
+func (o *userItem) decreaseBalance(sym string, value int, stub shim.ChaincodeStubInterface) error {
 	old := o.Balance[sym]
 	if old < value {
 		return errors.New("out of balance")
@@ -54,7 +57,7 @@ func (o *UserItem) decreaseBalance(sym string, value int, stub shim.ChaincodeStu
 	return nil
 }
 
-func (o *UserItem) increaseLockedBalance(sym string, value int, stub shim.ChaincodeStubInterface) error {
+func (o *userItem) increaseLockedBalance(sym string, value int, stub shim.ChaincodeStubInterface) error {
 	old := o.LockedBalance[sym]
 	old += value
 	o.LockedBalance[sym] = old
@@ -62,7 +65,7 @@ func (o *UserItem) increaseLockedBalance(sym string, value int, stub shim.Chainc
 	return nil
 }
 
-func (o *UserItem) decreaseLockedBalance(sym string, value int, stub shim.ChaincodeStubInterface) error {
+func (o *userItem) decreaseLockedBalance(sym string, value int, stub shim.ChaincodeStubInterface) error {
 	old := o.LockedBalance[sym]
 	if old < value {
 		return errors.New("out of balance")
@@ -73,13 +76,13 @@ func (o *UserItem) decreaseLockedBalance(sym string, value int, stub shim.Chainc
 	return nil
 }
 
-type UserManger struct {
-	Sellers  []string `json:"sellers"`   //所有管理员
-	Users    []string `json:"users"`     //所有用户
-	LogIndex int      `json:"log_index"` //日志索引，类似于mysql的自增长ID
+type userManger struct {
+	Root        string   `json:"root"`
+	BankMangers []string `json:"bankmangers"` //所有管理员
+	Users       []string `json:"users"`       //所有用户
 }
 
-func (o UserManger) ToBuffer() []byte {
+func (o userManger) toBuffer() []byte {
 	buf, err := json.Marshal(o)
 	if err != nil {
 		return []byte{}
@@ -87,13 +90,12 @@ func (o UserManger) ToBuffer() []byte {
 	return buf
 }
 
-func GetUserManger(stub shim.ChaincodeStubInterface) *UserManger {
-	obj := &UserManger{
-		Users:    []string{},
-		Sellers:  []string{},
-		LogIndex: 0,
+func getUserManger(stub shim.ChaincodeStubInterface) *userManger {
+	obj := &userManger{
+		Users:       []string{},
+		BankMangers: []string{},
 	}
-	buf, _ := stub.GetState(KEY_USER_MANGER)
+	buf, _ := stub.GetState(keyUserManger)
 	if buf != nil {
 		json.Unmarshal(buf, obj)
 	} else {
@@ -102,45 +104,80 @@ func GetUserManger(stub shim.ChaincodeStubInterface) *UserManger {
 	return obj
 }
 
-func (o *UserManger) save(stub shim.ChaincodeStubInterface) {
-	stub.PutState(KEY_USER_MANGER, o.ToBuffer())
+func (o *userManger) save(stub shim.ChaincodeStubInterface) error {
+	return stub.PutState(keyUserManger, o.toBuffer())
 }
 
-func (o *UserManger) getUser(name string, stub shim.ChaincodeStubInterface) *UserItem {
+func (o *userManger) getUserFromID(name string, stub shim.ChaincodeStubInterface) (*userItem, error) {
 	key := "members_" + name
 	value, err := stub.GetState(key)
 	if err != nil {
-		return nil
+		return nil, err
 	}
-	obj := &UserItem{}
+	obj := &userItem{}
 	err = json.Unmarshal(value, obj)
 	if err != nil {
-		return nil
+		return nil, err
 	}
-	return obj
+	return obj, nil
 }
 
-func (o *UserManger) addUser(name string, bankname string, utype int, stub shim.ChaincodeStubInterface) (*UserItem, error) {
-	user := o.getUser(name, stub)
-	if user != nil {
+func (o *userManger) getUserID(publickey string) string {
+	hs := md5.New()
+	hs.Write([]byte(publickey))
+	return hex.EncodeToString(hs.Sum(nil))
+}
+
+func (o *userManger) getUser(key string, stub shim.ChaincodeStubInterface) (*userItem, error) {
+	if len(key) != 32 {
+		key = o.getUserID(key)
+	}
+	return o.getUserFromID(key, stub)
+}
+
+func (o *userManger) addUser(publickey string, stub shim.ChaincodeStubInterface) (*userItem, error) {
+	user, err := o.getUser(publickey, stub)
+	if err == nil {
 		return nil, errors.New("user alerady exist")
 	}
-	if utype != 1 && utype != 2 {
-		return nil, errors.New("user type error")
-	}
-	user = &UserItem{
-		UserName:      name,
-		BirthBankName: bankname,
+	user = &userItem{
+		PublicKey:     publickey,
+		ID:            o.getUserID(publickey),
+		UserType:      userTypeNormal,
 		Balance:       map[string]int{},
 		LockedBalance: map[string]int{},
-		Type:          utype,
 	}
-	if utype == 2 {
-		o.Sellers = append(o.Sellers, name)
-	} else {
-		o.Users = append(o.Users, name)
+	if len(o.Root) == 0 {
+		user.UserType = userTypeRoot
+		o.Root = user.ID
 	}
-	user.save(stub)
-	o.save(stub)
+	o.Users = append(o.Users, user.ID)
+	err = user.save(stub)
+	if err != nil {
+		return nil, err
+	}
+	err = o.save(stub)
+	if err != nil {
+		return nil, err
+	}
+	return user, nil
+}
+
+func (o *userManger) upgradeUser(key string, stub shim.ChaincodeStubInterface) (*userItem, error) {
+	user, err := o.getUser(key, stub)
+	if err != nil {
+		return nil, err
+	}
+	if user.UserType != userTypeNormal {
+		return user, nil
+	}
+	o.BankMangers = append(o.BankMangers, user.ID)
+	user.UserType = userTypeBankManger
+	if err := user.save(stub); err != nil {
+		return nil, err
+	}
+	if err := o.save(stub); err != nil {
+		return nil, err
+	}
 	return user, nil
 }

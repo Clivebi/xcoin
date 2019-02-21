@@ -8,19 +8,22 @@ import (
 )
 
 const (
-	KEY_BANK_MANGER = "bank_manger_root"
+	keyBankManger = "bank_manger_root"
 )
 
-type BankItem struct {
-	BankName    string `json:"bankname"`
-	Currency    string `json:"currency"`
-	Chip        string `json:"chip"`
-	TotalAmount int    `json:"totalamount"`
-	UsedAmount  int    `json:"usedamount"`
-	Exchanger   string `json:"exchanger"`
+type bankItem struct {
+	BankName         string             `json:"bankname"`
+	Currency         string             `json:"currency"`
+	Chip             string             `json:"chip"`
+	ChipLimit        int                `json:"chiplimit"`
+	UsedChip         int                `json:"chipused"`
+	CurrencyCount    int                `json:"currencyCount"`
+	MangerName       string             `json:"mangername"`
+	ExchangeMap      map[string]float64 `json:"exchangemap"`
+	FixedExchangeMap map[string]float64 `json:"fiexedexchangemap"`
 }
 
-func (o BankItem) ToBuffer() []byte {
+func (o bankItem) toBuffer() []byte {
 	buf, err := json.Marshal(o)
 	if err != nil {
 		return []byte{}
@@ -28,12 +31,12 @@ func (o BankItem) ToBuffer() []byte {
 	return buf
 }
 
-type BankManger struct {
-	Banks    []*BankItem
+type bankManger struct {
+	Banks    []*bankItem
 	UsedKeys string
 }
 
-func (o BankManger) ToBuffer() []byte {
+func (o bankManger) toBuffer() []byte {
 	buf, err := json.Marshal(o)
 	if err != nil {
 		return []byte{}
@@ -41,9 +44,9 @@ func (o BankManger) ToBuffer() []byte {
 	return buf
 }
 
-func GetBankManger(stub shim.ChaincodeStubInterface) *BankManger {
-	obj := &BankManger{}
-	buf, _ := stub.GetState(KEY_BANK_MANGER)
+func getBankManger(stub shim.ChaincodeStubInterface) *bankManger {
+	obj := &bankManger{}
+	buf, _ := stub.GetState(keyBankManger)
 	if buf != nil {
 		json.Unmarshal(buf, obj)
 	} else {
@@ -52,12 +55,12 @@ func GetBankManger(stub shim.ChaincodeStubInterface) *BankManger {
 	return obj
 }
 
-func (o *BankManger) save(stub shim.ChaincodeStubInterface) error {
-	return stub.PutState(KEY_BANK_MANGER, o.ToBuffer())
+func (o *bankManger) save(stub shim.ChaincodeStubInterface) error {
+	return stub.PutState(keyBankManger, o.toBuffer())
 }
 
 //以下两接口检查命名冲突和添加命名
-func (o *BankManger) checkUsedKeys(bank BankItem) error {
+func (o *bankManger) checkUsedKeys(bank bankItem) error {
 	key := "|" + bank.BankName + "|"
 	if strings.Contains(o.UsedKeys, key) {
 		return errors.New("bank name used:" + bank.BankName)
@@ -70,25 +73,19 @@ func (o *BankManger) checkUsedKeys(bank BankItem) error {
 	if strings.Contains(o.UsedKeys, key) {
 		return errors.New("currency used:" + bank.Currency)
 	}
-	key = "|" + bank.Exchanger + "|"
-	if strings.Contains(o.UsedKeys, key) {
-		return errors.New("exchanger name used:" + bank.Exchanger)
-	}
 	return nil
 }
 
-func (o *BankManger) addUsedKeys(bank BankItem) {
+func (o *bankManger) addUsedKeys(bank bankItem) {
 	key := "|" + bank.BankName + "|"
 	key += bank.Chip
 	key += "|"
 	key += bank.Currency
 	key += "|"
-	key += bank.Exchanger
-	key += "|"
 	o.UsedKeys += key
 }
 
-func (o *BankManger) lookupBankByCurrency(currency string) (*BankItem, error) {
+func (o *bankManger) lookupBankByCurrency(currency string) (*bankItem, error) {
 	for _, it := range o.Banks {
 		if it.Currency == currency {
 			return it, nil
@@ -97,7 +94,7 @@ func (o *BankManger) lookupBankByCurrency(currency string) (*BankItem, error) {
 	return nil, errors.New("bank not found")
 }
 
-func (o *BankManger) lookupBankByName(name string) (*BankItem, error) {
+func (o *bankManger) lookupBankByName(name string) (*bankItem, error) {
 	for _, it := range o.Banks {
 		if it.BankName == name {
 			return it, nil
@@ -106,7 +103,7 @@ func (o *BankManger) lookupBankByName(name string) (*BankItem, error) {
 	return nil, errors.New("bank not found")
 }
 
-func (o *BankManger) lookupBankByChip(chip string) (*BankItem, error) {
+func (o *bankManger) lookupBankByChip(chip string) (*bankItem, error) {
 	for _, it := range o.Banks {
 		if it.Chip == chip {
 			return it, nil
@@ -115,26 +112,27 @@ func (o *BankManger) lookupBankByChip(chip string) (*BankItem, error) {
 	return nil, errors.New("bank not found")
 }
 
-func (o *BankManger) lookupBankByExchanger(name string) (*BankItem, error) {
+func (o *bankManger) lookupBankByMangerName(name string) (*bankItem, error) {
 	for _, it := range o.Banks {
-		if it.Exchanger == name {
+		if it.MangerName == name {
 			return it, nil
 		}
 	}
 	return nil, errors.New("bank not found")
 }
 
-func (o *BankManger) addBank(stub shim.ChaincodeStubInterface, item BankItem) (*BankItem, error) {
+func (o *bankManger) addBank(stub shim.ChaincodeStubInterface, item bankItem) (*bankItem, error) {
 	if err := o.checkUsedKeys(item); err != nil {
 		return nil, err
 	}
-	nit := &BankItem{
-		BankName:    item.BankName,
-		Currency:    item.Currency,
-		Chip:        item.Chip,
-		TotalAmount: item.TotalAmount,
-		UsedAmount:  0,
-		Exchanger:   item.Exchanger,
+	nit := &bankItem{
+		BankName:      item.BankName,
+		Currency:      item.Currency,
+		Chip:          item.Chip,
+		ChipLimit:     0,
+		UsedChip:      0,
+		CurrencyCount: 0,
+		MangerName:    item.MangerName,
 	}
 	o.Banks = append(o.Banks, nit)
 	o.addUsedKeys(item)

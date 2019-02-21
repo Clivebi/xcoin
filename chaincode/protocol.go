@@ -1,26 +1,13 @@
 package main
 
-type AddUserOffer struct {
-	PublickKey string `json:"pubkey"`
-	Time       int64  `json:"timestamp"`
+type Request struct {
+	Time     int64    `json:"timestamp"` //时间戳
+	FromID   string   `json:"fromid"`    //调用者，用户的ID或者public key
+	function string   `json:"func"`      //调用函数
+	args     []string `json:"args"`      //调用参数
 }
 
-type UpgradeUserOffser struct {
-	CallID string `json:"callid"`
-	UserID string `json:"id"`
-	Limit  int    `json:"limit"`
-	Time   int64  `json:"timestamp"`
-}
-
-type GetUserOffser struct {
-	CallID string `json:"callid"`
-	UserID string `json:"id"`
-	Time   int64  `json:"timestamp"`
-}
-
-type SendTranscationOffser struct {
-	CallID string `json:"callid"`
-	ToUser string `json:"toid"`
-	Coin   int    `json:"coin"`
-	Time   int64  `json:"timestamp"`
-}
+/*
+调用合约功能
+o.client.Execute(channel.Request{ChaincodeID: o.conf.ChainCode, Fcn: "callapi", Args: [requrst,signature]}
+*/
