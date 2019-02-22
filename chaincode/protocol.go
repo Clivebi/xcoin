@@ -1,5 +1,6 @@
 package main
 
+//Request 数据打包格式
 type Request struct {
 	Time     int64    `json:"timestamp"` //时间戳
 	FromID   string   `json:"fromid"`    //调用者，用户的ID或者public key

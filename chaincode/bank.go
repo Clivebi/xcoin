@@ -126,13 +126,15 @@ func (o *bankManger) addBank(stub shim.ChaincodeStubInterface, item bankItem) (*
 		return nil, err
 	}
 	nit := &bankItem{
-		BankName:      item.BankName,
-		Currency:      item.Currency,
-		Chip:          item.Chip,
-		ChipLimit:     0,
-		UsedChip:      0,
-		CurrencyCount: 0,
-		MangerName:    item.MangerName,
+		BankName:         item.BankName,
+		Currency:         item.Currency,
+		Chip:             item.Chip,
+		ChipLimit:        0,
+		UsedChip:         0,
+		CurrencyCount:    0,
+		MangerName:       item.MangerName,
+		ExchangeMap:      map[string]float64{},
+		FixedExchangeMap: map[string]float64{},
 	}
 	o.Banks = append(o.Banks, nit)
 	o.addUsedKeys(item)

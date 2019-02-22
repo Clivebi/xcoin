@@ -14,7 +14,7 @@ import (
 )
 
 const (
-	isDebug = true
+	isDebug = false
 )
 
 // CoinChaincode 实际操作类
@@ -408,7 +408,7 @@ func (t *CoinChaincode) exchange(stub shim.ChaincodeStubInterface, req *requestP
 	}
 	toValue := int((float64(value) * rate))
 	if toToken {
-		if tobank.UsedChip+toValue < tobank.ChipLimit {
+		if tobank.UsedChip+toValue > tobank.ChipLimit {
 			req.caller.increaseBalance(args[0], value, stub)
 			return shim.Error(tobank.BankName + " out of limit")
 		}
