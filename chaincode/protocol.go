@@ -3,8 +3,8 @@ package main
 type Request struct {
 	Time     int64    `json:"timestamp"` //时间戳
 	FromID   string   `json:"fromid"`    //调用者，用户的ID或者public key
-	function string   `json:"func"`      //调用函数
-	args     []string `json:"args"`      //调用参数
+	Function string   `json:"func"`      //调用函数
+	Args     []string `json:"args"`      //调用参数
 }
 
 /*

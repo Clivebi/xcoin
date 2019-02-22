@@ -72,7 +72,7 @@ func (t *CoinChaincode) Invoke(stub shim.ChaincodeStubInterface) pb.Response {
 		}
 		packet.caller, _ = umgr.getUser(req.FromID, stub)
 	}
-	if packet.caller == nil && req.function != "adduser" {
+	if packet.caller == nil && req.Function != "adduser" {
 		return shim.Error("FromID not exist")
 	}
 	return t.invoke(stub, packet, umgr, bmgr)
@@ -99,8 +99,8 @@ func (t *CoinChaincode) checkSignature(args string, sig string, key string, stub
 }
 
 func (t *CoinChaincode) invoke(stub shim.ChaincodeStubInterface, req *requestPacket, umgr *userManger, bmgr *bankManger) pb.Response {
-	fmt.Println("invoke ", req.req.function, req.req.args)
-	switch req.req.function {
+	fmt.Println("invoke ", req.req.Function, req.req.Args)
+	switch req.req.Function {
 	case "addbank":
 		return t.addBank(stub, req, umgr, bmgr)
 	case "adjustbanklimit":
@@ -122,16 +122,16 @@ func (t *CoinChaincode) invoke(stub shim.ChaincodeStubInterface, req *requestPac
 	case "exchange":
 		return t.exchange(stub, req, umgr, bmgr)
 	default:
-		return shim.Error("invalid function:" + req.req.function)
+		return shim.Error("invalid function:" + req.req.Function)
 	}
 }
 
 func (t *CoinChaincode) addUser(stub shim.ChaincodeStubInterface, req *requestPacket, umgr *userManger, bmgr *bankManger) pb.Response {
 	//arg:[publickey]
-	if len(req.req.args) != 1 {
+	if len(req.req.Args) != 1 {
 		return shim.Error("Incorrect number of arguments. Expecting 1")
 	}
-	user, err := umgr.addUser(req.req.args[0], stub)
+	user, err := umgr.addUser(req.req.Args[0], stub)
 	if err != nil {
 		return shim.Error(err.Error())
 	}
@@ -140,19 +140,19 @@ func (t *CoinChaincode) addUser(stub shim.ChaincodeStubInterface, req *requestPa
 
 func (t *CoinChaincode) getUser(stub shim.ChaincodeStubInterface, req *requestPacket, umgr *userManger, bmgr *bankManger) pb.Response {
 	//arg:[username]
-	if len(req.req.args) != 1 {
+	if len(req.req.Args) != 1 {
 		return shim.Error("Incorrect number of arguments. Expecting 1")
 	}
-	user, err := umgr.getUser(req.req.args[0], stub)
+	user, err := umgr.getUser(req.req.Args[0], stub)
 	if err != nil {
-		return shim.Error("user name not found:" + req.req.args[0])
+		return shim.Error("get user error " + err.Error())
 	}
 	return shim.Success(user.toBuffer())
 }
 
 func (t *CoinChaincode) addBank(stub shim.ChaincodeStubInterface, req *requestPacket, umgr *userManger, bmgr *bankManger) pb.Response {
 	//arg:[bankname,currency,chip,manger]
-	args := req.req.args
+	args := req.req.Args
 	if len(args) != 4 {
 		return shim.Error("Incorrect number of arguments. Expecting 4")
 	}
@@ -185,7 +185,7 @@ func (t *CoinChaincode) addBank(stub shim.ChaincodeStubInterface, req *requestPa
 
 func (t *CoinChaincode) adjustLimit(stub shim.ChaincodeStubInterface, req *requestPacket, umgr *userManger, bmgr *bankManger) pb.Response {
 	//arg:[bankname,newvalue]
-	args := req.req.args
+	args := req.req.Args
 	if len(args) != 2 {
 		return shim.Error("Incorrect number of arguments. Expecting 2")
 	}
@@ -210,7 +210,7 @@ func (t *CoinChaincode) adjustLimit(stub shim.ChaincodeStubInterface, req *reque
 
 func (t *CoinChaincode) getBank(stub shim.ChaincodeStubInterface, req *requestPacket, umgr *userManger, bmgr *bankManger) pb.Response {
 	//arg: [bankname]
-	args := req.req.args
+	args := req.req.Args
 	if len(args) != 1 {
 		return shim.Error("Incorrect number of arguments. Expecting 1")
 	}
@@ -223,7 +223,7 @@ func (t *CoinChaincode) getBank(stub shim.ChaincodeStubInterface, req *requestPa
 
 func (t *CoinChaincode) setExchaneMap(stub shim.ChaincodeStubInterface, req *requestPacket, umgr *userManger, bmgr *bankManger) pb.Response {
 	//arg:[isfixed,exchanemapjson]
-	args := req.req.args
+	args := req.req.Args
 	if len(args) != 2 {
 		return shim.Error("Incorrect number of arguments. Expecting 2")
 	}
@@ -253,7 +253,7 @@ func (t *CoinChaincode) setExchaneMap(stub shim.ChaincodeStubInterface, req *req
 
 func (t *CoinChaincode) cashIn(stub shim.ChaincodeStubInterface, req *requestPacket, umgr *userManger, bmgr *bankManger) pb.Response {
 	//arg: [username,currency,amount]
-	args := req.req.args
+	args := req.req.Args
 	if len(args) != 3 {
 		return shim.Error("Incorrect number of arguments. Expecting 3")
 	}
@@ -293,7 +293,7 @@ func (t *CoinChaincode) cashIn(stub shim.ChaincodeStubInterface, req *requestPac
 
 func (t *CoinChaincode) cashout(stub shim.ChaincodeStubInterface, req *requestPacket, umgr *userManger, bmgr *bankManger) pb.Response {
 	//arg: [username,currency,amount]
-	args := req.req.args
+	args := req.req.Args
 	if len(args) != 3 {
 		return shim.Error("Incorrect number of arguments. Expecting 3")
 	}
@@ -329,7 +329,7 @@ func (t *CoinChaincode) cashout(stub shim.ChaincodeStubInterface, req *requestPa
 
 func (t *CoinChaincode) exchange(stub shim.ChaincodeStubInterface, req *requestPacket, umgr *userManger, bmgr *bankManger) pb.Response {
 	//arg: [fromcurrency,tocurrency,amount,isfixedrate]
-	args := req.req.args
+	args := req.req.Args
 	if len(args) != 4 {
 		return shim.Error("Incorrect number of arguments. Expecting 4")
 	}
@@ -432,7 +432,7 @@ func (t *CoinChaincode) exchange(stub shim.ChaincodeStubInterface, req *requestP
 
 func (t *CoinChaincode) transfer(stub shim.ChaincodeStubInterface, req *requestPacket, umgr *userManger, bmgr *bankManger) pb.Response {
 	//arg: [touser,currency,amount,islocked]
-	args := req.req.args
+	args := req.req.Args
 	fromUser := req.caller
 	if len(args) != 4 {
 		return shim.Error("Incorrect number of arguments. Expecting 4")
@@ -479,7 +479,11 @@ func (t *CoinChaincode) transfer(stub shim.ChaincodeStubInterface, req *requestP
 	}
 	if fromUser.UserType == userTypeNormal && toUser.UserType == userTypeBankManger {
 		//chippay
-		err = fromUser.decreaseBalance(args[1], value, stub)
+		if args[3] == "true" {
+			err = fromUser.decreaseLockedBalance(args[1], value, stub)
+		} else {
+			err = fromUser.decreaseBalance(args[1], value, stub)
+		}
 		if err != nil {
 			return shim.Error(err.Error())
 		}

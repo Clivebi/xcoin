@@ -10,8 +10,8 @@ import (
 	"io/ioutil"
 )
 
+// Response  返回结构体
 type Response struct {
-	Status       int                    `json:"status"`
 	ErrorMessage string                 `json:"errmsg"`
 	TxID         string                 `json:"txid"`
 	TxValidCode  string                 `json:"valid_code"`
@@ -22,14 +22,12 @@ func getResponse(payload string, txID string, Code string, err error) []byte {
 	var data map[string]interface{}
 	json.Unmarshal([]byte(payload), &data)
 	rsp := &Response{
-		Status:       200,
 		ErrorMessage: "sucess",
 		TxID:         txID,
 		TxValidCode:  Code,
 		Payload:      data,
 	}
 	if err != nil {
-		rsp.Status = 500
 		rsp.ErrorMessage = err.Error()
 	}
 	buf, _ := json.Marshal(rsp)
@@ -42,13 +40,15 @@ type request struct {
 	result   chan []byte
 }
 
+//AppRunner 合约调用器
 type AppRunner struct {
 	queue  chan *request
 	client *channel.Client
 	sdk    *fabsdk.FabricSDK
-	conf   *AppConfig
+	conf   *appConfig
 }
 
+//NewAppRunner 创建合约调用器
 func NewAppRunner() (*AppRunner, error) {
 	o := &AppRunner{
 		queue:  make(chan *request, 64),
@@ -63,6 +63,7 @@ func NewAppRunner() (*AppRunner, error) {
 	return o, nil
 }
 
+//Close close the apprunner
 func (o *AppRunner) Close() {
 	o.queue <- nil
 	if o.sdk != nil {
@@ -70,6 +71,7 @@ func (o *AppRunner) Close() {
 	}
 }
 
+// SendRequest call chaincode and wait the result
 func (o *AppRunner) SendRequest(function string, args []string) []byte {
 	req := &request{
 		args:     args,
@@ -97,7 +99,7 @@ func (o *AppRunner) initClient() error {
 	if err != nil {
 		return err
 	}
-	conf := &AppConfig{}
+	conf := &appConfig{}
 	err = json.Unmarshal(buf, conf)
 	if err != nil {
 		return err
@@ -128,9 +130,8 @@ func (o *AppRunner) initClient() error {
 }
 
 func (o *AppRunner) callCC(function string, args []string) []byte {
-	var err error = nil
 	if o.client == nil {
-		err = o.initClient()
+		err := o.initClient()
 		if err != nil {
 			return getResponse("", "", "", err)
 		}
@@ -142,7 +143,7 @@ func (o *AppRunner) callCC(function string, args []string) []byte {
 	rep, err := o.client.Execute(channel.Request{ChaincodeID: o.conf.ChainCode, Fcn: function, Args: txArgs},
 		channel.WithRetry(retry.DefaultChannelOpts))
 	if err != nil {
-		return getResponse("", "", "", err.Error())
+		return getResponse("", "", "", err)
 	}
 	return getResponse(string(rep.Payload), string(rep.TransactionID), rep.TxValidationCode.String(), nil)
 }

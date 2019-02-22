@@ -1,6 +1,6 @@
 package proxy
 
-type AppConfig struct {
+type appConfig struct {
 	ChannelID      string `json:"channnel"`
 	OrgName        string `json:"orgname"`
 	OrgAdmin       string `json:"orgadmin"`
