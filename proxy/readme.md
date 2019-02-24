@@ -1,11 +1,11 @@
 #总则:  
-1. 所有对外暴露的接口只有一个就是/callapi.do,参与需使用post json（application/json）的格式调用
-   调用参数为：
-   {
-   	 "req":"字符串类型的请求数据包，由Request序列化成字符串而成",
-   	 "sig":"调用者使用私钥对req签名后的结果"
-   }
-   其中req为真正的请求结构体Request如下，序列化而成的字符串
+1. 所有对外暴露的接口只有一个就是/callapi.do,参与需使用post json（application/json）的格式调用  
+   调用参数为：  
+   {  
+   	 "req":"字符串类型的请求数据包，由Request序列化成字符串而成",  
+   	 "sig":"调用者使用私钥对req签名后的结果"  
+   }  
+   其中req为真正的请求结构体Request如下，序列化而成的字符串  
    ```
    {
     "timestamp": 1550825521,  	 //时间戳，用于对抗 重放攻击
@@ -28,10 +28,10 @@
 #用户接口  
 
 ##添加用户  
-func : "adduser"
-args :["新增用户的RSA公钥"]
-权限： 任何人都可以调用，第一个添加的用户为root账户
-返回值：用户的信息，例子
+func : "adduser"  
+args :["新增用户的RSA公钥"]  
+权限： 任何人都可以调用，第一个添加的用户为root账户  
+返回值：用户的信息，例子  
 ```
 请求：
 {
@@ -61,11 +61,11 @@ args :["新增用户的RSA公钥"]
 ```
 
 ##查询用户信息  
-func : "getuser"
-args :["用户的public key或者用户ID"]
-备注：用户ID在adduser之后返回
-权限： 任何人都可以调用，既可以查询自己，也可以查询别人
-返回值：用户的信息，例子
+func : "getuser"  
+args :["用户的public key或者用户ID"]  
+备注：用户ID在adduser之后返回  
+权限： 任何人都可以调用，既可以查询自己，也可以查询别人  
+返回值：用户的信息，例子  
 ```
 请求：
 {
@@ -79,7 +79,7 @@ args :["用户的public key或者用户ID"]
 ```
 
 ```
-回应：
+回应：  
 {
     "errmsg": "sucess", 
     "txid": "e490e9149a12239e3a1f5c29aee2d912cbeb68bcae4d5f5ec45920422b226fd3", 
@@ -96,77 +96,95 @@ args :["用户的public key或者用户ID"]
 
 #banker操作接口  
 ##创建bank  
-
-http://127.0.0.1:8789/createbank?bankname=bankA&currency=USD&chip=chipA&exchanger=ex_A  
-参数：bankname 	银行名  
- 	 currency 	法币  
- 	 chip 	  	Token名字  
- 	 exchanger 	和x管保持一致性，我们这里目前没有意义  
-备注：所有参数都要求是全局唯一的，也就是banname全局唯一，currency全局唯一，chip全局唯一，exchanger全局唯一  
-返回值：创建后，银行的具体信息，json格式  
+func : "addbank"  
+args :["bankname","使用的法币名称","使用的Token名字","管理员的公钥或者ID"]   
+权限： 只有root用户才能调用此接口  
+备注：每个银行只能使用一种法币和一种Token币，而且名字是全局排重的，就是不能重复，管理员需要先adduser  
+	 否则这个函数会调用失败，调用后，这个这个ID指定的用户被升级成银行管理员  
+返回值：银行的信息，例子  
 ```
+请求：
 {
-	"status": 200,
-	"errmsg": "sucess",
-	"txid": "4ab10d98cc9f2dfb85be992f05b67f2aff66a562acdb9a99e355c3cfbfcd7a84",
-	"valid_code": "VALID",
-	"data": {
-		"bankname": "bankA",
-		"chip": "chipA",
-		"currency": "USD",
-		"exchanger": "ex_A",
-		"totalamount": 0,
-		"usedamount": 0
-	}
+    "timestamp": 1550825585, 
+    "fromid": "MIIBCgKCAQEA12ytFRV9NMC6LWh8HGPSQSoxKjwgBZ+3DrcVgKEj9t2a6AOVNMQNl9sH87Bkp208UFoneA0j6ry9s8l2da1a5fRj2opRPFF2S3cK7AhVzHHe7WNQESgYLpHxORxFC5Y5C5LGa0cj6megxu95GvEu61lbkxmScdWWfLiLLhI5Cr/5jOaFzNahsx1W3tdD66EkYMqKaCED67TUjVRU2b0EOTVz/Yw5xJSerSz35WDk4uo19rHt+Vn91DmbT+CVpooGQeTdiPbX2d39LMafqLrWOUgRhOAs3jlS8x9v0ERiLQWV9HMwABjQs+DmMwB7YW+Zxq62CrU5wzsPP6uNbDWXGwIDAQAB", 
+    "func": "addbank", 
+    "args": [
+        "bankA", 
+        "USD", 
+        "TokenA", 
+        "MIIBCgKCAQEAvMk0UUJK0r1wKbuqBlrEphKK7UR/EFOCz7p5oAyKpqX2hBZZQgaiQc9ebZRouGj+Giui2/S1eZDHAVzqeYNQ665l/TjvJerHTphp2NRVyBDESawuQxnyLDx81dY/iEPN9yg0YzXpssN8SvTOslo15O2SnkxJ6Wkno90pg34jjIM0oZWQ/K3u4W1alN9urOzYKzcC6ycJKbeDfBTHhEF/vm+HpzyHDsXNQ6Ax85CODu74+SE6JLqIBek0dSSn09VzWcS3C6tD/4+0IoqTb01MdoT72toUYUTV5p1zEJBbmr4/VJXkaJ4ecgraNe6URDl/TlMV5UtMExhdBqErhTXUlQIDAQAB"
+    ]
 }
 ```
 
+```
+回应：  
+{
+    "errmsg": "sucess", 
+    "txid": "581614bd197abdc5d65a80ee76081a161810014cb4726c41d67cc24d5dcb48dc", 
+    "valid_code": "VALID", 
+    "data": {
+        "bankname": "bankA", 	//	银行名字
+        "chip": "TokenA", 		//	Token名字
+        "chiplimit": 0, 		//	Token限额，用户可使用这种Token的数量
+        "chipused": 0, 			//	已经使用的Token
+        "currency": "USD", 		//	法币名字
+        "currencyCount": 0, 	//	法币池值
+        "exchangemap": { }, 	//	汇率表，只需要指定法币即可，例如 {"USD2HKD":7.0,"HKD2USD":0.14}
+        "fiexedexchangemap": { }, 	//	固定汇率表
+        "mangername": "5e9c47ef7d0565c43a4d17d53f0fc0da"	//	管理员ID
+    }
+}
+```
 ##获取bank信息  
-http://127.0.0.1:8789/getbank?bankname=bankA  
-参数：bankname 	银行名  
-返回值：银行的目前信息  
-```
-```
+func : "getbank"  
+args :["bankname"]   
+权限： 任何人都可调用   
+返回值：银行的信息，同addbank  
 
-##增加（预支）资金池  
-http://127.0.0.1:8789/changebanklimit?bankname=bankA&add_threshold=50000  
-参数：bankname 银行名  
-	 add_threshold 增加值  
-备注：预支资金池影响issue的功能，issue将会使用资金池里面的资金，如果资金不够，issue将会失败，刚创建的银行，资金池为0，需要进行首次调整才能正常使用issue功能  
-返回值：操作完成后银行的信息  
-```
-```
+##设置bank的token限额  
+func : "adjustbanklimit"  
+args :["bankname","限额值"]   
+权限： 只有root账户可调用此功能   
+返回值：银行的信息，同addbank  
 
-#其它功能  
-##充值法币  
-http://127.0.0.1:8789/cashin?username=user001&currency=USD&amount=100
-参数：username 用户名
-	 currency 法币名
-	 amount   数量
-备注：每个用户可拥有多种法币，所以充值的时候，可以接受任意法币币种
-返回值：充值后用户信息
+##设置汇率
+func : "setexchanemap"  
+args :["isfixedmap","newvalue"]   
+权限： 只有银行管理员可以调用此接口，而且只能操作自己管理的银行   
+返回值：银行的信息，同addbank  
 ```
-
-
-```
-##法币转Token（issue）  
-http://127.0.0.1:8789/issue?username=user001&bankname=bankA&currency=USD&amount=100
-充值法币  
-
-##提现法币  
-http://127.0.0.1:8789/cashout?username=user001&bankname=banA&fromcurrency=USD&dstcurrency=USD&amount=100
-参数：username 		用户名
-	 bankname 		从哪个银行支出
-	 fromcurrency 	支出的货币类型，因为每个银行只有一种法币，如果这个法币不是支出银行所有的，将会返回错误
-	 dstcurrency	提取成哪种法币，目前仅支持fromcurrency == dstcurrency的情况
-	 amount   		数量
-返回值：提现后返回用户信息
+请求：
+{
+    "timestamp": 1550825759, 
+    "fromid": "MIIBCgKCAQEAzRjSSSk5Y4Rve2Yk4fViAnSa01iB6d35qqsWoNs/F4XoRTxp03j8jVGWnJFbG+oAoSnWjbf7Ba7K6BN5ClKDwRjh1T6DEiJAJmfzLArpZrMZbP7JnLCV4TYmOUPDzHSKz9//23NZO6wuhDTgwEqxPhSBe2zaNBI7PQkM6WNdc1ldN+Km6cwxg0P2mn+ltjKVjh4NY3LEBI45vs6vgO+8aZLVjfXqTM6DCMqZTGo6/IzU3N+AwtLR/m7KkDMFZkQGnj8J9+fn7WPqV+Dr9UxA7B7l1Pkm2BaosBKREjRuiU8oBTnoJLe/PTdSrgLblEwKqJGkwYRen7/JUsq9nz7s6wIDAQAB", 
+    "func": "setexchanemap", 
+    "args": [
+        "false", 
+        "{\"USD2HKD\":7.0,\"HKD2USD\":0.14}"
+    ]
+}
 ```
 
 ```
-
-##花费Token  
-
-##法币/Token转账  
-
-
+回应：  
+{
+    "errmsg": "sucess", 
+    "txid": "aea750280173a0dcb9b6e5f17362585b809968f1c8818fd376cc89bce0ad4191", 
+    "valid_code": "VALID", 
+    "data": {
+        "bankname": "bankB", 
+        "chip": "TokenB", 
+        "chiplimit": 1000000, 
+        "chipused": 0, 
+        "currency": "HKD", 
+        "currencyCount": 0, 
+        "exchangemap": {
+            "HKD2USD": 0.14, 
+            "USD2HKD": 7
+        }, 
+        "fiexedexchangemap": { }, 
+        "mangername": "854c7458f81ecd02cb2d7d05503ea272"
+    }
+}
+```
