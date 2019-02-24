@@ -1,10 +1,12 @@
 #总则:  
-1. 所有对外暴露的接口只有一个就是/callapi.do,参与需使用post json（application/json）的格式调用  
-   调用参数为：  
+1. 所有对外暴露的接口只有一个就是/callapi.do,必须使用post（application/json）的格式调用  
+   ，不支持get和FROM的原因是存在base64编码，会导致字符丢失，调用参数为：  
+   ```
    {  
    	 "req":"字符串类型的请求数据包，由Request序列化成字符串而成",  
-   	 "sig":"调用者使用私钥对req签名后的结果"  
-   }  
+   	 "sig":"调用者使用私钥对req签名后的结果base64编码"  
+   }
+   ```  
    其中req为真正的请求结构体Request如下，序列化而成的字符串  
    ```
    {
@@ -24,6 +26,7 @@
     "data": {} 				//这个值为调用func之后返回的信息，json格式，根据func不同而不同
 }
 ```
+3. 所有接口的测试代码可以参考:https://github.com/Clivebi/xcoin/blob/master/proxy/proxy_test.go  
 
 #用户接口  
 
@@ -185,6 +188,86 @@ args :["isfixedmap","newvalue"]
         }, 
         "fiexedexchangemap": { }, 
         "mangername": "854c7458f81ecd02cb2d7d05503ea272"
+    }
+}
+```
+
+##转账
+func : "transfer"  
+args :["目标用户的公钥或者ID","货币类型","数量","是否是从locked的资金转出"]   
+权限： 任何人都可以调用此接口   
+备注：普通用户可以转给普通用户，银行管理员可以转给普通用户，普通用户可以转个银行管理员，除此之外的转账将引发一个错误  
+返回值：转账后自己的账户信息，同addbank  
+```
+请求：
+{
+    "timestamp": 1550825674, 
+    "fromid": "MIIBCgKCAQEAyyJx9RA9C/ttxblz+XY+Y3myyISxVEe7P7TiFAlIMTTlJKj5TFE1xxiKTQ3l8r10G6mRGBcKFHVTcSYe3t5vW7B+h+Yb+8S8hc+Vk0BRN89BzLsn28X96GfV2KAXGOfZXWbwnzBrolGUuFRqXqVQQORdVl4ToYcnb3secXxCWrerynvguzlDYwmXmtwddXbkeh0w47nrAtFKHIObIYHHXbMSr7kDyp63zvzxg6Ao20Bh0ZXgxmli2rcW9XLSpDS0VAlWeBRMnKYlRsoj4VZpF7UmChmDVpq2pzlMLzRfOHoxCugTSkJm4vYn/gsHKsFxZqR6x98AWCrNINhqxpGA/QIDAQAB", 
+    "func": "transfer", 
+    "args": [
+        "MIIBCgKCAQEA0rhlfneD/hmY+yS95P8c65seVOEfVRfZEV7FIF7GaGMEX8GmE1444amo4VL3vB+DiSSW8KzKZ4TmPWi3Tm5IKL6GiUCl7sSYXxplqW+uApyLT0Zpn4Hgbf6JPj0uvLDXAH2QIty84G50tCeFm5mNrrs197AWcZBBSs+UsP8Ug/oDrbgh1NR6yPOeYv9gEmQ2ARqaq9iAuw3hjjSxTHW8wfFGx0QlVKuKZN9RTbnNMMwhZU5myUXvUMFUzGm+X99ck7Vda8bAlGBzRBSjzzMXRjL46ojcfBag1ERr+5FjuDJ9dyV/iZh77daEuYeTixmkIphQreRCsZid9ljdgVIdZQIDAQAB", 
+        "USD", 
+        "100", 
+        "false"
+    ]
+}
+```
+
+```
+回应：  
+{
+    "errmsg": "sucess", 
+    "txid": "d0e6d15b2f935e333c176b5860e394fc55b653884704940eef9316fc4453573d", 
+    "valid_code": "VALID", 
+    "data": {
+        "balance": {
+            "USD": 1800
+        }, 
+        "id": "56d4dd669c45f7aa5a8d92dc4414e081", 
+        "lockedbalance": { }, 
+        "pub_key": "MIIBCgKCAQEAyyJx9RA9C/ttxblz+XY+Y3myyISxVEe7P7TiFAlIMTTlJKj5TFE1xxiKTQ3l8r10G6mRGBcKFHVTcSYe3t5vW7B+h+Yb+8S8hc+Vk0BRN89BzLsn28X96GfV2KAXGOfZXWbwnzBrolGUuFRqXqVQQORdVl4ToYcnb3secXxCWrerynvguzlDYwmXmtwddXbkeh0w47nrAtFKHIObIYHHXbMSr7kDyp63zvzxg6Ao20Bh0ZXgxmli2rcW9XLSpDS0VAlWeBRMnKYlRsoj4VZpF7UmChmDVpq2pzlMLzRfOHoxCugTSkJm4vYn/gsHKsFxZqR6x98AWCrNINhqxpGA/QIDAQAB", 
+        "type": 2
+    }
+}
+
+```
+##货币兑换
+func : "exchange"  
+args :["付出的货币类型","目标货币类型","数量","是否使用固定汇率"]   
+权限： 任何人都可以调用此接口   
+备注：普通用户可以转给普通用户，银行管理员可以转给普通用户，普通用户可以转个银行管理员，除此之外的转账将引发一个错误  
+返回值：兑换后自己的账户信息，同addbank  
+```
+请求：
+{
+    "timestamp": 1550825695, 
+    "fromid": "MIIBCgKCAQEAyyJx9RA9C/ttxblz+XY+Y3myyISxVEe7P7TiFAlIMTTlJKj5TFE1xxiKTQ3l8r10G6mRGBcKFHVTcSYe3t5vW7B+h+Yb+8S8hc+Vk0BRN89BzLsn28X96GfV2KAXGOfZXWbwnzBrolGUuFRqXqVQQORdVl4ToYcnb3secXxCWrerynvguzlDYwmXmtwddXbkeh0w47nrAtFKHIObIYHHXbMSr7kDyp63zvzxg6Ao20Bh0ZXgxmli2rcW9XLSpDS0VAlWeBRMnKYlRsoj4VZpF7UmChmDVpq2pzlMLzRfOHoxCugTSkJm4vYn/gsHKsFxZqR6x98AWCrNINhqxpGA/QIDAQAB", 
+    "func": "exchange", 
+    "args": [
+        "USD", 
+        "TokenA", 
+        "500", 
+        "false"
+    ]
+}
+```
+
+```
+回应：  
+
+{
+    "errmsg": "sucess", 
+    "txid": "22508bc94142a6514f6c99f2c3d9993cd0910773f9e2a2ec75fba89c21ac75ed", 
+    "valid_code": "VALID", 
+    "data": {
+        "balance": {
+            "TokenA": 500, 
+            "USD": 1300
+        }, 
+        "id": "56d4dd669c45f7aa5a8d92dc4414e081", 
+        "lockedbalance": { }, 
+        "pub_key": "MIIBCgKCAQEAyyJx9RA9C/ttxblz+XY+Y3myyISxVEe7P7TiFAlIMTTlJKj5TFE1xxiKTQ3l8r10G6mRGBcKFHVTcSYe3t5vW7B+h+Yb+8S8hc+Vk0BRN89BzLsn28X96GfV2KAXGOfZXWbwnzBrolGUuFRqXqVQQORdVl4ToYcnb3secXxCWrerynvguzlDYwmXmtwddXbkeh0w47nrAtFKHIObIYHHXbMSr7kDyp63zvzxg6Ao20Bh0ZXgxmli2rcW9XLSpDS0VAlWeBRMnKYlRsoj4VZpF7UmChmDVpq2pzlMLzRfOHoxCugTSkJm4vYn/gsHKsFxZqR6x98AWCrNINhqxpGA/QIDAQAB", 
+        "type": 2
     }
 }
 ```
