@@ -1,17 +1,9 @@
 package proxy
 
 import (
-	"bytes"
 	"crypto"
 	"crypto/rand"
 	"crypto/rsa"
-	"crypto/sha256"
-	"crypto/x509"
-	"encoding/base64"
-	"encoding/json"
-	"errors"
-	"io/ioutil"
-	"net/http"
 	"testing"
 	"time"
 )
@@ -29,18 +21,6 @@ const (
 	apiURL        = "http://127.0.0.1:8789/callapi.do"
 )
 
-type Request struct {
-	Time     int64    `json:"timestamp"` //时间戳
-	FromID   string   `json:"fromid"`    //调用者，用户的ID或者public key
-	Function string   `json:"func"`      //调用函数
-	Args     []string `json:"args"`      //调用参数
-}
-
-type sendBuffer struct {
-	Req string `json:"req"`
-	Sig string `json:"sig"`
-}
-
 func initEnv() {
 	publickkeys = make([]crypto.PublicKey, 5)
 	privatekeys = make([]crypto.PrivateKey, 5)
@@ -54,66 +34,44 @@ func initEnv() {
 }
 
 func publickeyText(role int) string {
-	buf := x509.MarshalPKCS1PublicKey(publickkeys[role].(*rsa.PublicKey))
-	return base64.StdEncoding.EncodeToString(buf)
+	return PublicKeyToString(publickkeys[role].(*rsa.PublicKey))
 }
 
-func signText(pk crypto.PrivateKey, text string) (string, error) {
-	hash := sha256.Sum256([]byte(text))
-	buf, err := rsa.SignPKCS1v15(rand.Reader, pk.(*rsa.PrivateKey), crypto.SHA256, hash[:])
-	if err != nil {
-		return "", err
-	}
-	return base64.StdEncoding.EncodeToString(buf), nil
-}
-
-//GetPublickeyText 从私钥获取文本格式的公钥
-func GetPublickeyText(pk crypto.PrivateKey) string {
-	buf := x509.MarshalPKCS1PublicKey(pk.(*rsa.PrivateKey).Public().(*rsa.PublicKey))
-	return base64.StdEncoding.EncodeToString(buf)
-}
-
-//CallAPI 调用合约功能
-//pk 发起函数调用的调用者的私钥
-//function args 将要调用合约的功能和参数
-func CallAPI(pk crypto.PrivateKey, function string, args []string, t *testing.T) (string, error) {
-	req := &Request{
-		FromID:   GetPublickeyText(pk),
-		Time:     time.Now().Unix(),
-		Function: function,
-		Args:     args,
-	}
-	buf, err := json.Marshal(req)
-	if err != nil {
-		return "", err
-	}
-	sbuf := &sendBuffer{
-		Req: string(buf),
-		Sig: "",
-	}
-	sbuf.Sig, err = signText(pk, sbuf.Req)
-	if err != nil {
-		return "", err
-	}
-	buf, _ = json.Marshal(sbuf)
-	rd := bytes.NewReader(buf)
-	rsp, err := http.Post(apiURL, "application/json", rd)
-	if err != nil {
-		return "", err
-	}
-	if rsp.StatusCode != 200 {
-		return "", errors.New("HTTP ERROR :" + rsp.Status)
-	}
-	t.Log(sbuf.Req)
-	buf, err = ioutil.ReadAll(rsp.Body)
-	if err != nil {
-		return "", err
-	}
-	return string(buf), err
+func publickeyToID(role int) string {
+	return PublicKeyToID(publickkeys[role].(*rsa.PublicKey))
 }
 
 func callAPI(role int, function string, args []string, t *testing.T) (string, error) {
-	text, err := CallAPI(privatekeys[role], function, args, t)
+	req, err := NewRequest(PublicKeyToID(publickkeys[role].(*rsa.PublicKey)), function, args)
+	if err != nil {
+		t.Error(err.Error())
+		return "", err
+	}
+	callersig, err := SignRequest(req, privatekeys[role].(*rsa.PrivateKey))
+	if err != nil {
+		t.Error(err.Error())
+		return "", err
+	}
+	t.Log(req)
+	text, err := CallAPI(apiURL, req, callersig, "")
+	time.Sleep(time.Second * 5)
+	return text, err
+}
+
+func callAPIWithOptionUser(role int, function string, args []string, optuser int, t *testing.T) (string, error) {
+	req, err := NewRequest(PublicKeyToID(publickkeys[role].(*rsa.PublicKey)), function, args)
+	if err != nil {
+		t.Error(err.Error())
+		return "", err
+	}
+	callersig, err := SignRequest(req, privatekeys[role].(*rsa.PrivateKey))
+	if err != nil {
+		t.Error(err.Error())
+		return "", err
+	}
+	optusersig, err := SignRequest(req, privatekeys[optuser].(*rsa.PrivateKey))
+	t.Log(req)
+	text, err := CallAPI(apiURL, req, callersig, optusersig)
 	time.Sleep(time.Second * 5)
 	return text, err
 }
@@ -166,21 +124,21 @@ func TestUser(t *testing.T) {
 
 func TestBank(t *testing.T) {
 	t.Log(" add bank must success")
-	out, err := callAPI(rootUser, "addbank", []string{"bankA", "USD", "TokenA", publickeyText(mangerOfBankA)}, t)
+	out, err := callAPI(rootUser, "addbank", []string{"bankA", "USD", "TokenA", publickeyToID(mangerOfBankA)}, t)
 	if err != nil {
 		t.Error(err)
 		return
 	}
 	t.Log(out)
 	t.Log(" add bank must failed")
-	out, err = callAPI(normalUserA, "addbank", []string{"bankB", "HKD", "TokenB", publickeyText(mangerOfBankB)}, t)
+	out, err = callAPI(normalUserA, "addbank", []string{"bankB", "HKD", "TokenB", publickeyToID(mangerOfBankB)}, t)
 	if err != nil {
 		t.Error(err)
 		return
 	}
 	t.Log(out)
 	t.Log(" add bank must success")
-	out, err = callAPI(rootUser, "addbank", []string{"bankB", "HKD", "TokenB", publickeyText(mangerOfBankB)}, t)
+	out, err = callAPI(rootUser, "addbank", []string{"bankB", "HKD", "TokenB", publickeyToID(mangerOfBankB)}, t)
 	if err != nil {
 		t.Error(err)
 		return
@@ -188,7 +146,7 @@ func TestBank(t *testing.T) {
 	t.Log(out)
 
 	t.Log(" get mangerOfBankB info")
-	out, err = callAPI(mangerOfBankB, "getuser", []string{publickeyText(mangerOfBankB)}, t)
+	out, err = callAPI(mangerOfBankB, "getuser", []string{publickeyToID(mangerOfBankB)}, t)
 	if err != nil {
 		t.Error(err)
 		return
@@ -222,14 +180,14 @@ func TestBank(t *testing.T) {
 
 func TestCashin(t *testing.T) {
 	t.Log("cashin")
-	out, err := callAPI(mangerOfBankA, "cashin", []string{publickeyText(normalUserA), "USD", "2000"}, t)
+	out, err := callAPIWithOptionUser(mangerOfBankA, "cashin", []string{publickeyToID(normalUserA), "USD", "2000"}, normalUserA, t)
 	if err != nil {
 		t.Error(err)
 		return
 	}
 	t.Log(out)
 	t.Log("after cashin query userA")
-	out, err = callAPI(normalUserA, "getuser", []string{publickeyText(normalUserA)}, t)
+	out, err = callAPI(normalUserA, "getuser", []string{publickeyToID(normalUserA)}, t)
 	if err != nil {
 		t.Error(err)
 	}
@@ -244,14 +202,14 @@ func TestCashin(t *testing.T) {
 
 func TestCashout(t *testing.T) {
 	t.Log("cashout")
-	out, err := callAPI(mangerOfBankA, "cashout", []string{publickeyText(normalUserA), "USD", "100"}, t)
+	out, err := callAPIWithOptionUser(mangerOfBankA, "cashout", []string{publickeyToID(normalUserA), "USD", "100"}, normalUserA, t)
 	if err != nil {
 		t.Error(err)
 		return
 	}
 	t.Log(out)
 	t.Log("after cashout query userA")
-	out, err = callAPI(normalUserA, "getuser", []string{publickeyText(normalUserA)}, t)
+	out, err = callAPI(normalUserA, "getuser", []string{publickeyToID(normalUserA)}, t)
 	if err != nil {
 		t.Error(err)
 	}
@@ -266,20 +224,20 @@ func TestCashout(t *testing.T) {
 
 func TestP2PSend(t *testing.T) {
 	t.Log("P2PSend")
-	out, err := callAPI(normalUserA, "transfer", []string{publickeyText(normalUserB), "USD", "100", "false"}, t)
+	out, err := callAPI(normalUserA, "transfer", []string{publickeyToID(normalUserB), "USD", "100", "false"}, t)
 	if err != nil {
 		t.Error(err)
 		return
 	}
 	t.Log(out)
 	t.Log("after P2PSend query userA")
-	out, err = callAPI(normalUserA, "getuser", []string{publickeyText(normalUserA)}, t)
+	out, err = callAPI(normalUserA, "getuser", []string{publickeyToID(normalUserA)}, t)
 	if err != nil {
 		t.Error(err)
 	}
 	t.Log(out)
 	t.Log("after P2PSend query userB")
-	out, err = callAPI(normalUserA, "getuser", []string{publickeyText(normalUserB)}, t)
+	out, err = callAPI(normalUserA, "getuser", []string{publickeyToID(normalUserB)}, t)
 	if err != nil {
 		t.Error(err)
 	}
@@ -294,7 +252,7 @@ func TestIssue(t *testing.T) {
 	}
 	t.Log(out)
 	t.Log("after Issue query userA")
-	out, err = callAPI(normalUserA, "getuser", []string{publickeyText(normalUserA)}, t)
+	out, err = callAPI(normalUserA, "getuser", []string{publickeyToID(normalUserA)}, t)
 	if err != nil {
 		t.Error(err)
 	}
@@ -308,13 +266,13 @@ func TestIssue(t *testing.T) {
 }
 func TestChipPay(t *testing.T) {
 	t.Log("ChipPay")
-	out, err := callAPI(normalUserA, "transfer", []string{publickeyText(mangerOfBankA), "TokenA", "200", "false"}, t)
+	out, err := callAPI(normalUserA, "transfer", []string{publickeyToID(mangerOfBankA), "TokenA", "200", "false"}, t)
 	if err != nil {
 		t.Error(err)
 	}
 	t.Log(out)
 	t.Log("after ChipPay query userA")
-	out, err = callAPI(normalUserA, "getuser", []string{publickeyText(normalUserA)}, t)
+	out, err = callAPI(normalUserA, "getuser", []string{publickeyToID(normalUserA)}, t)
 	if err != nil {
 		t.Error(err)
 	}
@@ -329,13 +287,13 @@ func TestChipPay(t *testing.T) {
 
 func TestChipReceive(t *testing.T) {
 	t.Log("ChipReceive")
-	out, err := callAPI(mangerOfBankA, "transfer", []string{publickeyText(normalUserA), "TokenA", "100", "false"}, t)
+	out, err := callAPI(mangerOfBankA, "transfer", []string{publickeyToID(normalUserA), "TokenA", "100", "false"}, t)
 	if err != nil {
 		t.Error(err)
 	}
 	t.Log(out)
 	t.Log("after ChipReceive query userA")
-	out, err = callAPI(normalUserA, "getuser", []string{publickeyText(normalUserA)}, t)
+	out, err = callAPI(normalUserA, "getuser", []string{publickeyToID(normalUserA)}, t)
 	if err != nil {
 		t.Error(err)
 	}
@@ -369,7 +327,7 @@ func TestExchangeC2C(t *testing.T) {
 	}
 	t.Log(out)
 	t.Log("after ExchangeC2C query userA")
-	out, err = callAPI(normalUserA, "getuser", []string{publickeyText(normalUserA)}, t)
+	out, err = callAPI(normalUserA, "getuser", []string{publickeyToID(normalUserA)}, t)
 	if err != nil {
 		t.Error(err)
 	}
@@ -396,7 +354,7 @@ func TestExchangeC2T(t *testing.T) {
 	}
 	t.Log(out)
 	t.Log("after ExchangeC2T query userA")
-	out, err = callAPI(normalUserA, "getuser", []string{publickeyText(normalUserA)}, t)
+	out, err = callAPI(normalUserA, "getuser", []string{publickeyToID(normalUserA)}, t)
 	if err != nil {
 		t.Error(err)
 	}
@@ -423,7 +381,7 @@ func TestExchangeT2T(t *testing.T) {
 	}
 	t.Log(out)
 	t.Log("after ExchangeT2T query userA")
-	out, err = callAPI(normalUserA, "getuser", []string{publickeyText(normalUserA)}, t)
+	out, err = callAPI(normalUserA, "getuser", []string{publickeyToID(normalUserA)}, t)
 	if err != nil {
 		t.Error(err)
 	}
@@ -450,7 +408,7 @@ func TestExchangeT2C(t *testing.T) {
 	}
 	t.Log(out)
 	t.Log("after ExchangeT2C query userA")
-	out, err = callAPI(normalUserA, "getuser", []string{publickeyText(normalUserA)}, t)
+	out, err = callAPI(normalUserA, "getuser", []string{publickeyToID(normalUserA)}, t)
 	if err != nil {
 		t.Error(err)
 	}

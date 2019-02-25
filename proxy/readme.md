@@ -2,21 +2,29 @@
 1. 所有对外暴露的接口只有一个<127.0.0.1:8789/callapi.do>,必须使用post（application/json）的格式调用  
    ，不支持get和FROM的原因是存在base64编码，会导致字符丢失，调用参数为：  
    ```
+   Post 的JSON格式如下：
    {  
-   	 "req":"字符串类型的请求数据包，由Request序列化成字符串而成",  
-   	 "sig":"调用者使用私钥对req签名后的结果base64编码"  
+   	 "req":"请求数据包由Request序列化成字符串",  
+   	 "sig":"签名信息Signature序列化字符串"  
    }
-   ```  
-   其中req为真正的请求结构体Request如下，序列化而成的字符串  
-   ```
+
+   Request 如下：
    {
-    "timestamp": 1550825521,  	 //时间戳，用于对抗 重放攻击
+    "timestamp": 1550825521,     //时间戳，用于对抗 重放攻击
     "fromid": "user public key", //调用者的ID或者公钥,如果是公钥，使用base64 编码的x509 序列化公钥
-    "func": "adduser", 			 //要调用的功能函数
-    "args": ["arg1","arg2"] 	 //传递给功能函数的参数
+    "func": "adduser",           //要调用的功能函数
+    "args": ["arg1","arg2"]      //传递给功能函数的参数，字符串数组
    }
-   ```
-   由上述说明可知，对于调用功能而言，每次需要变更的是func 和args参数，下面针对的是func和args参数的说明   
+   调用不同的功能，需要不同的func和args参数
+
+   Signature 如下：
+   {
+     "caller":"函数调用者使用私钥对req进行RSA签名的结果的base64",
+     "optuser":"目标用户使用私钥对req进行RSA签名的结果的base64"
+   }
+   其中，所有的功能调用，caller的签名是必须的，optuser的签名只有在需要在场证明的情况下才需要，目前只有cashin，cashout需要在场证明  
+   即需要bank manger和用户同时在场，功能由bank manger调用，但是同时需要用户的签名  
+   ```  
 2. 返回结果均是标准化的JSON，其格式如下   
 ```
 {
@@ -27,6 +35,7 @@
 }
 ```
 3. 所有接口的测试代码可以参考:https://github.com/Clivebi/xcoin/blob/master/proxy/proxy_test.go  
+4. 用户ID算法，hex(md5(base64(publickey)))
 
 #用户接口  
 

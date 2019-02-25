@@ -22,8 +22,10 @@ type CoinChaincode struct {
 }
 
 type requestPacket struct {
-	req    *Request
-	caller *userItem
+	req       *Request
+	caller    *userItem
+	sig       *Signature
+	rawPacket string
 }
 
 //Init initlaize chaincode
@@ -48,40 +50,35 @@ func (t *CoinChaincode) Invoke(stub shim.ChaincodeStubInterface) pb.Response {
 	if err != nil {
 		return shim.Error(err.Error())
 	}
+	sig := &Signature{}
+	err = json.Unmarshal([]byte(args[1]), sig)
+	if err != nil {
+		return shim.Error(err.Error())
+	}
+	if len(sig.Caller) == 0 {
+		return shim.Error("caller signature not exist")
+	}
 	umgr := getUserManger(stub)
 	bmgr := getBankManger(stub)
-	key := req.FromID
 	packet := &requestPacket{
-		req:    req,
-		caller: nil,
+		req:       req,
+		caller:    nil,
+		rawPacket: args[0],
+		sig:       sig,
 	}
-	if len(req.FromID) == 32 {
-		user, err := umgr.getUser(key, stub)
-		if err != nil {
-			return shim.Error(err.Error())
-		}
-		err = t.checkSignature(args[0], args[1], user.PublicKey, stub)
-		if err != nil {
-			return shim.Error(err.Error())
-		}
-		packet.caller = user
+	key := req.FromID
+	if req.Function == "adduser" && len(req.Args) == 1 {
+		key = req.Args[0]
 	} else {
-		key := req.FromID
-		if len(key) == 0 {
-			if req.Function == "adduser" && len(req.Args) == 1 {
-				key = req.Args[0]
-			} else {
-				shim.Error("FromID not exist,check signature failed")
-			}
-		}
-		err = t.checkSignature(args[0], args[1], key, stub)
+		packet.caller, err = umgr.getUser(req.FromID, stub)
 		if err != nil {
-			return shim.Error(err.Error())
+			return shim.Error("caller not found")
 		}
-		packet.caller, _ = umgr.getUser(req.FromID, stub)
+		key = packet.caller.PublicKey
 	}
-	if packet.caller == nil && req.Function != "adduser" {
-		return shim.Error("FromID not exist or not register")
+	err = t.checkSignature(args[0], sig.Caller, key, stub)
+	if err != nil {
+		shim.Error("check caller signature failed " + err.Error())
 	}
 	return t.invoke(stub, packet, umgr, bmgr)
 }
@@ -286,6 +283,11 @@ func (t *CoinChaincode) cashIn(stub shim.ChaincodeStubInterface, req *requestPac
 	if user.UserType != userTypeNormal {
 		return shim.Error("You can only call this function on a normal user")
 	}
+
+	if err := t.checkSignature(req.rawPacket, req.sig.OptUser, user.PublicKey, stub); err != nil {
+		return shim.Error("check signature for " + user.ID + " failed")
+	}
+
 	err = user.increaseBalance(args[1], value, stub)
 	if err != nil {
 		return shim.Error(err.Error())
@@ -322,6 +324,9 @@ func (t *CoinChaincode) cashout(stub shim.ChaincodeStubInterface, req *requestPa
 	}
 	if bank.MangerName != req.caller.ID {
 		return shim.Error("You are not a manger of this bank " + bank.BankName)
+	}
+	if err := t.checkSignature(req.rawPacket, req.sig.OptUser, user.PublicKey, stub); err != nil {
+		return shim.Error("check signature for " + user.ID + " failed")
 	}
 	err = user.decreaseBalance(bank.Currency, value, stub)
 	if err != nil {

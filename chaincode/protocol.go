@@ -8,6 +8,12 @@ type Request struct {
 	Args     []string `json:"args"`      //调用参数
 }
 
+//Signature 签名格式
+type Signature struct {
+	Caller  string `json:"caller"`
+	OptUser string `json:"optuser"`
+}
+
 /*
 调用合约功能
 o.client.Execute(channel.Request{ChaincodeID: o.conf.ChainCode, Fcn: "callapi", Args: [requrst,signature]}
