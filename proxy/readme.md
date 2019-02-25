@@ -191,7 +191,78 @@ args :["isfixedmap","newvalue"]
     }
 }
 ```
+##法币充值  
+func : "cashin"  
+args :["目标用户","目标货币类型","数量"]   
+权限： 只有银行管理员能够调用，而且只能操作自己管理的银行，即第二个参数必须和自己管理银行的法币相同   
+返回值：充值后目标用户的账户信息，同addbank  
+```
+请求：
+{
+    "timestamp": 1550825632, 
+    "fromid": "MIIBCgKCAQEAvMk0UUJK0r1wKbuqBlrEphKK7UR/EFOCz7p5oAyKpqX2hBZZQgaiQc9ebZRouGj+Giui2/S1eZDHAVzqeYNQ665l/TjvJerHTphp2NRVyBDESawuQxnyLDx81dY/iEPN9yg0YzXpssN8SvTOslo15O2SnkxJ6Wkno90pg34jjIM0oZWQ/K3u4W1alN9urOzYKzcC6ycJKbeDfBTHhEF/vm+HpzyHDsXNQ6Ax85CODu74+SE6JLqIBek0dSSn09VzWcS3C6tD/4+0IoqTb01MdoT72toUYUTV5p1zEJBbmr4/VJXkaJ4ecgraNe6URDl/TlMV5UtMExhdBqErhTXUlQIDAQAB", 
+    "func": "cashin", 
+    "args": [
+        "MIIBCgKCAQEAyyJx9RA9C/ttxblz+XY+Y3myyISxVEe7P7TiFAlIMTTlJKj5TFE1xxiKTQ3l8r10G6mRGBcKFHVTcSYe3t5vW7B+h+Yb+8S8hc+Vk0BRN89BzLsn28X96GfV2KAXGOfZXWbwnzBrolGUuFRqXqVQQORdVl4ToYcnb3secXxCWrerynvguzlDYwmXmtwddXbkeh0w47nrAtFKHIObIYHHXbMSr7kDyp63zvzxg6Ao20Bh0ZXgxmli2rcW9XLSpDS0VAlWeBRMnKYlRsoj4VZpF7UmChmDVpq2pzlMLzRfOHoxCugTSkJm4vYn/gsHKsFxZqR6x98AWCrNINhqxpGA/QIDAQAB", 
+        "USD", 
+        "2000"
+    ]
+}
+```
 
+```
+回应：  
+{
+    "errmsg": "sucess", 
+    "txid": "1bfae83fb84c7b7d34e499cfb655d5577fcfd9e95c5c28c7ee4b406f339499d7", 
+    "valid_code": "VALID", 
+    "data": {
+        "balance": {
+            "USD": 2000
+        }, 
+        "id": "56d4dd669c45f7aa5a8d92dc4414e081", 
+        "lockedbalance": { }, 
+        "pub_key": "MIIBCgKCAQEAyyJx9RA9C/ttxblz+XY+Y3myyISxVEe7P7TiFAlIMTTlJKj5TFE1xxiKTQ3l8r10G6mRGBcKFHVTcSYe3t5vW7B+h+Yb+8S8hc+Vk0BRN89BzLsn28X96GfV2KAXGOfZXWbwnzBrolGUuFRqXqVQQORdVl4ToYcnb3secXxCWrerynvguzlDYwmXmtwddXbkeh0w47nrAtFKHIObIYHHXbMSr7kDyp63zvzxg6Ao20Bh0ZXgxmli2rcW9XLSpDS0VAlWeBRMnKYlRsoj4VZpF7UmChmDVpq2pzlMLzRfOHoxCugTSkJm4vYn/gsHKsFxZqR6x98AWCrNINhqxpGA/QIDAQAB", 
+        "type": 2
+    }
+}
+```
+##法币提取  
+func : "cashout"  
+args :["付出的货币类型","目标货币类型","数量","是否使用固定汇率"]   
+权限： 只有银行管理员能够调用，而且只能操作自己管理的银行，即第二个参数必须和自己管理银行的法币相同   
+返回值：提取后目标的账户信息，同addbank  
+```
+请求：
+{
+    "timestamp": 1550825653, 
+    "fromid": "MIIBCgKCAQEAvMk0UUJK0r1wKbuqBlrEphKK7UR/EFOCz7p5oAyKpqX2hBZZQgaiQc9ebZRouGj+Giui2/S1eZDHAVzqeYNQ665l/TjvJerHTphp2NRVyBDESawuQxnyLDx81dY/iEPN9yg0YzXpssN8SvTOslo15O2SnkxJ6Wkno90pg34jjIM0oZWQ/K3u4W1alN9urOzYKzcC6ycJKbeDfBTHhEF/vm+HpzyHDsXNQ6Ax85CODu74+SE6JLqIBek0dSSn09VzWcS3C6tD/4+0IoqTb01MdoT72toUYUTV5p1zEJBbmr4/VJXkaJ4ecgraNe6URDl/TlMV5UtMExhdBqErhTXUlQIDAQAB", 
+    "func": "cashout", 
+    "args": [
+        "MIIBCgKCAQEAyyJx9RA9C/ttxblz+XY+Y3myyISxVEe7P7TiFAlIMTTlJKj5TFE1xxiKTQ3l8r10G6mRGBcKFHVTcSYe3t5vW7B+h+Yb+8S8hc+Vk0BRN89BzLsn28X96GfV2KAXGOfZXWbwnzBrolGUuFRqXqVQQORdVl4ToYcnb3secXxCWrerynvguzlDYwmXmtwddXbkeh0w47nrAtFKHIObIYHHXbMSr7kDyp63zvzxg6Ao20Bh0ZXgxmli2rcW9XLSpDS0VAlWeBRMnKYlRsoj4VZpF7UmChmDVpq2pzlMLzRfOHoxCugTSkJm4vYn/gsHKsFxZqR6x98AWCrNINhqxpGA/QIDAQAB", 
+        "USD", 
+        "100"
+    ]
+}
+```
+
+```
+回应：  
+{
+    "errmsg": "sucess", 
+    "txid": "12a7fc5304b62f5d2e81823764ed8d2ef8cd1caa639366ac5f3421e6fd81be78", 
+    "valid_code": "VALID", 
+    "data": {
+        "balance": {
+            "USD": 1900
+        }, 
+        "id": "56d4dd669c45f7aa5a8d92dc4414e081", 
+        "lockedbalance": { }, 
+        "pub_key": "MIIBCgKCAQEAyyJx9RA9C/ttxblz+XY+Y3myyISxVEe7P7TiFAlIMTTlJKj5TFE1xxiKTQ3l8r10G6mRGBcKFHVTcSYe3t5vW7B+h+Yb+8S8hc+Vk0BRN89BzLsn28X96GfV2KAXGOfZXWbwnzBrolGUuFRqXqVQQORdVl4ToYcnb3secXxCWrerynvguzlDYwmXmtwddXbkeh0w47nrAtFKHIObIYHHXbMSr7kDyp63zvzxg6Ao20Bh0ZXgxmli2rcW9XLSpDS0VAlWeBRMnKYlRsoj4VZpF7UmChmDVpq2pzlMLzRfOHoxCugTSkJm4vYn/gsHKsFxZqR6x98AWCrNINhqxpGA/QIDAQAB", 
+        "type": 2
+    }
+}
+```
 ##转账
 func : "transfer"  
 args :["目标用户的公钥或者ID","货币类型","数量","是否是从locked的资金转出"]   
@@ -231,7 +302,7 @@ args :["目标用户的公钥或者ID","货币类型","数量","是否是从lock
 }
 
 ```
-##货币兑换
+##货币兑换  
 func : "exchange"  
 args :["付出的货币类型","目标货币类型","数量","是否使用固定汇率"]   
 权限： 任何人都可以调用此接口   

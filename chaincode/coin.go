@@ -66,14 +66,22 @@ func (t *CoinChaincode) Invoke(stub shim.ChaincodeStubInterface) pb.Response {
 		}
 		packet.caller = user
 	} else {
-		err = t.checkSignature(args[0], args[1], req.FromID, stub)
+		key := req.FromID
+		if len(key) == 0 {
+			if req.Function == "adduser" && len(req.Args) == 1 {
+				key = req.Args[0]
+			} else {
+				shim.Error("FromID not exist,check signature failed")
+			}
+		}
+		err = t.checkSignature(args[0], args[1], key, stub)
 		if err != nil {
 			return shim.Error(err.Error())
 		}
 		packet.caller, _ = umgr.getUser(req.FromID, stub)
 	}
 	if packet.caller == nil && req.Function != "adduser" {
-		return shim.Error("FromID not exist")
+		return shim.Error("FromID not exist or not register")
 	}
 	return t.invoke(stub, packet, umgr, bmgr)
 }
