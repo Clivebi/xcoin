@@ -478,6 +478,9 @@ func (t *CoinChaincode) transfer(stub shim.ChaincodeStubInterface, req *requestP
 
 	if fromUser.UserType == userTypeBankManger && toUser.UserType == userTypeNormal {
 		//chipreceive
+		if bank.MangerName != fromUser.ID {
+			return shim.Error("transfer chip on this user type not allowed")
+		}
 		if bank.UsedChip+value > bank.ChipLimit {
 			return shim.Error(bank.BankName + " chip out of limit")
 		}
@@ -488,6 +491,9 @@ func (t *CoinChaincode) transfer(stub shim.ChaincodeStubInterface, req *requestP
 	}
 	if fromUser.UserType == userTypeNormal && toUser.UserType == userTypeBankManger {
 		//chippay
+		if bank.MangerName != toUser.ID {
+			return shim.Error("transfer chip on this user type not allowed")
+		}
 		if args[3] == "true" {
 			err = fromUser.decreaseLockedBalance(args[1], value, stub)
 		} else {
