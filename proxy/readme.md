@@ -1,6 +1,5 @@
 #总则:  
-1. 所有对外暴露的接口只有一个<127.0.0.1:8789/callapi.do>,必须使用post（application/json）的格式调用  
-   ，不支持get和FROM的原因是存在base64编码，会导致字符丢失，调用参数为：  
+1. 所有对外暴露的接口只有一个 POST/GET <127.0.0.1:8789/callapi.do>调用参数为：  
    ```
    Post 的JSON格式如下：
    {  
@@ -11,7 +10,7 @@
    Request 如下：
    {
     "timestamp": 1550825521,     //时间戳，用于对抗 重放攻击
-    "fromid": "user public key", //调用者的ID或者公钥,如果是公钥，使用base64 编码的x509 序列化公钥
+    "fromid": "user public key", //调用者的ID或者公钥,如果是公钥，使用base58
     "func": "adduser",           //要调用的功能函数
     "args": ["arg1","arg2"]      //传递给功能函数的参数，字符串数组
    }
@@ -19,8 +18,8 @@
 
    Signature 如下：
    {
-     "caller":"函数调用者使用私钥对req进行RSA签名的结果的base64",
-     "optuser":"目标用户使用私钥对req进行RSA签名的结果的base64"
+     "caller":"函数调用者使用私钥对req进行RSA签名的结果的base58",
+     "optuser":"目标用户使用私钥对req进行RSA签名的结果的base58"
    }
    其中，所有的功能调用，caller的签名是必须的，optuser的签名只有在需要在场证明的情况下才需要，目前只有cashin，cashout需要在场证明  
    即需要bank manger和用户同时在场，功能由bank manger调用，但是同时需要用户的签名  
@@ -35,7 +34,8 @@
 }
 ```
 3. 所有接口的测试代码可以参考:https://github.com/Clivebi/xcoin/blob/master/proxy/proxy_test.go  
-4. 用户ID算法，hex(md5(base64(publickey)))
+4. 用户ID算法，base58(sha256(publicKey))
+
 
 #用户接口  
 
@@ -47,11 +47,11 @@ args :["新增用户的RSA公钥"]
 ```
 请求：
 {
-    "timestamp": 1550825521, 
-    "fromid": "MIIBCgKCAQEA12ytFRV9NMC6LWh8HGPSQSoxKjwgBZ+3DrcVgKEj9t2a6AOVNMQNl9sH87Bkp208UFoneA0j6ry9s8l2da1a5fRj2opRPFF2S3cK7AhVzHHe7WNQESgYLpHxORxFC5Y5C5LGa0cj6megxu95GvEu61lbkxmScdWWfLiLLhI5Cr/5jOaFzNahsx1W3tdD66EkYMqKaCED67TUjVRU2b0EOTVz/Yw5xJSerSz35WDk4uo19rHt+Vn91DmbT+CVpooGQeTdiPbX2d39LMafqLrWOUgRhOAs3jlS8x9v0ERiLQWV9HMwABjQs+DmMwB7YW+Zxq62CrU5wzsPP6uNbDWXGwIDAQAB", 
-    "func": "adduser", 
+    "timestamp": 1551153414,
+    "fromid": "e14Lihsy8n7MBnQvUMooQWy9exJ7j3evooxmhXjaJwtizR",
+    "func": "adduser",
     "args": [
-        "MIIBCgKCAQEA12ytFRV9NMC6LWh8HGPSQSoxKjwgBZ+3DrcVgKEj9t2a6AOVNMQNl9sH87Bkp208UFoneA0j6ry9s8l2da1a5fRj2opRPFF2S3cK7AhVzHHe7WNQESgYLpHxORxFC5Y5C5LGa0cj6megxu95GvEu61lbkxmScdWWfLiLLhI5Cr/5jOaFzNahsx1W3tdD66EkYMqKaCED67TUjVRU2b0EOTVz/Yw5xJSerSz35WDk4uo19rHt+Vn91DmbT+CVpooGQeTdiPbX2d39LMafqLrWOUgRhOAs3jlS8x9v0ERiLQWV9HMwABjQs+DmMwB7YW+Zxq62CrU5wzsPP6uNbDWXGwIDAQAB"
+        "4D1btsFgbEQuvgZS6pu7rmfweC3UH1QprFALPMDeXVo8dsw5brJWFegfQff5owgQvqsQmUJUW8JHvaKGxBVppugbzkihPDz49YrgEQfzASHvNUfY56GEMDHvVF3fhYZG8fKTJS32JZRpFFo865HFgTUF8fVkxjhwanGiQnf8NmDC5WoDeBeempAseknTbu6ScjbzaxKMU1vyX78KHR73ocoAyY8B7eUFurBqkYkYWjRNh9h9DmksHFus1ZBUUZKRXeyRnH7iTURob4RCQCeYCDwEZ9mud4cJZZbSiZVLT9LM3EXpVQpKDd81ricDfKtPshPzN7feWa7d1J5An2npRZsJsMxzHTCjWuPk8kSzM3mkWCDwz"
     ]
 }
 ```
@@ -64,9 +64,9 @@ args :["新增用户的RSA公钥"]
     "valid_code": "VALID", 
     "data": {
         "balance": { }, // 用户的资产信息，例如 {"USD":100,"TokenA":800}
-        "id": "fbb3f222c61d9092927dd066460290af", //用户ID
+        "id": "e14Lihsy8n7MBnQvUMooQWy9exJ7j3evooxmhXjaJwtizR", //用户ID
         "lockedbalance": { }, // 用户的锁定资产信息
-        "pub_key": "MIIBCgKCAQEA12ytFRV9NMC6LWh8HGPSQSoxKjwgBZ+3DrcVgKEj9t2a6AOVNMQNl9sH87Bkp208UFoneA0j6ry9s8l2da1a5fRj2opRPFF2S3cK7AhVzHHe7WNQESgYLpHxORxFC5Y5C5LGa0cj6megxu95GvEu61lbkxmScdWWfLiLLhI5Cr/5jOaFzNahsx1W3tdD66EkYMqKaCED67TUjVRU2b0EOTVz/Yw5xJSerSz35WDk4uo19rHt+Vn91DmbT+CVpooGQeTdiPbX2d39LMafqLrWOUgRhOAs3jlS8x9v0ERiLQWV9HMwABjQs+DmMwB7YW+Zxq62CrU5wzsPP6uNbDWXGwIDAQAB", 			 // 用户公钥
+        "pub_key": "4D1btsFgbEQuvgZS6pu7rmfweC3UH1QprFALPMDeXVo8dsw5brJWFegfQff5owgQvqsQmUJUW8JHvaKGxBVppugbzkihPDz49YrgEQfzASHvNUfY56GEMDHvVF3fhYZG8fKTJS32JZRpFFo865HFgTUF8fVkxjhwanGiQnf8NmDC5WoDeBeempAseknTbu6ScjbzaxKMU1vyX78KHR73ocoAyY8B7eUFurBqkYkYWjRNh9h9DmksHFus1ZBUUZKRXeyRnH7iTURob4RCQCeYCDwEZ9mud4cJZZbSiZVLT9LM3EXpVQpKDd81ricDfKtPshPzN7feWa7d1J5An2npRZsJsMxzHTCjWuPk8kSzM3mkWCDwz", 			 // 用户公钥
         "type": 0		// 0 root账户，1 bank manger  2 normal user
     }
 }
@@ -81,11 +81,11 @@ args :["用户的public key或者用户ID"]
 ```
 请求：
 {
-    "timestamp": 1550825521, 
-    "fromid": "MIIBCgKCAQEA12ytFRV9NMC6LWh8HGPSQSoxKjwgBZ+3DrcVgKEj9t2a6AOVNMQNl9sH87Bkp208UFoneA0j6ry9s8l2da1a5fRj2opRPFF2S3cK7AhVzHHe7WNQESgYLpHxORxFC5Y5C5LGa0cj6megxu95GvEu61lbkxmScdWWfLiLLhI5Cr/5jOaFzNahsx1W3tdD66EkYMqKaCED67TUjVRU2b0EOTVz/Yw5xJSerSz35WDk4uo19rHt+Vn91DmbT+CVpooGQeTdiPbX2d39LMafqLrWOUgRhOAs3jlS8x9v0ERiLQWV9HMwABjQs+DmMwB7YW+Zxq62CrU5wzsPP6uNbDWXGwIDAQAB", 
-    "func": "getuser", 
+    "timestamp": 1551153460,
+    "fromid": "e122aNbAASxBPMRcpEL2Eut98sDFfjhH9cGxKYxEdwAR6s",
+    "func": "getuser",
     "args": [
-        "MIIBCgKCAQEA12ytFRV9NMC6LWh8HGPSQSoxKjwgBZ+3DrcVgKEj9t2a6AOVNMQNl9sH87Bkp208UFoneA0j6ry9s8l2da1a5fRj2opRPFF2S3cK7AhVzHHe7WNQESgYLpHxORxFC5Y5C5LGa0cj6megxu95GvEu61lbkxmScdWWfLiLLhI5Cr/5jOaFzNahsx1W3tdD66EkYMqKaCED67TUjVRU2b0EOTVz/Yw5xJSerSz35WDk4uo19rHt+Vn91DmbT+CVpooGQeTdiPbX2d39LMafqLrWOUgRhOAs3jlS8x9v0ERiLQWV9HMwABjQs+DmMwB7YW+Zxq62CrU5wzsPP6uNbDWXGwIDAQAB"
+        "4D1btsFgbEQuvRZTbkqUCdC1btMGSN8a2K7Z8Go2t2YgLUFhbZuKwva59PyKJ7Ndh7NHQPpDCjQXGb49cAzjvhDhVVWR5J1pyvpfWc2rhkJNyGZ2xfXaFDNWkgc2Dnhyb3KteHZ2wXUZRyfAgYKNFg8XDvqKF8ns9cB3UnGbYn7pTeZDphtwLrFezExadbDC1PtSEizYNYye52AoskAYrCoiUnzk3TKocwYUdmaufTmH9tYepheyV8MbPFKSDpJqXFV6ZwiQ3mgRrvmphtXz4Xbd4YiG67g878dvsGVMTTcQ8DWYX1zYXZ8xFyJZy2G2tHB7vbELJGvrFfDfxuQtXSmU5dW7TKPnbcg2mb4dk5TiTN9LH"
     ]
 }
 ```
@@ -93,15 +93,15 @@ args :["用户的public key或者用户ID"]
 ```
 回应：  
 {
-    "errmsg": "sucess", 
-    "txid": "e490e9149a12239e3a1f5c29aee2d912cbeb68bcae4d5f5ec45920422b226fd3", 
-    "valid_code": "VALID", 
+    "errmsg": "sucess",
+    "txid": "22de3f90b950fce614026f05898772594498922834236273b8deed4437b9c81d",
+    "valid_code": "VALID",
     "data": {
-        "balance": { }, 
-        "id": "fbb3f222c61d9092927dd066460290af", 
-        "lockedbalance": { }, 
-        "pub_key": "MIIBCgKCAQEA12ytFRV9NMC6LWh8HGPSQSoxKjwgBZ+3DrcVgKEj9t2a6AOVNMQNl9sH87Bkp208UFoneA0j6ry9s8l2da1a5fRj2opRPFF2S3cK7AhVzHHe7WNQESgYLpHxORxFC5Y5C5LGa0cj6megxu95GvEu61lbkxmScdWWfLiLLhI5Cr/5jOaFzNahsx1W3tdD66EkYMqKaCED67TUjVRU2b0EOTVz/Yw5xJSerSz35WDk4uo19rHt+Vn91DmbT+CVpooGQeTdiPbX2d39LMafqLrWOUgRhOAs3jlS8x9v0ERiLQWV9HMwABjQs+DmMwB7YW+Zxq62CrU5wzsPP6uNbDWXGwIDAQAB", 
-        "type": 0
+        "balance": {},
+        "id": "e1dW9MvoiNX4SajEU1VVVMkYsL2ehijSmhRbVWUKXPXXYk",
+        "lockedbalance": {},
+        "pub_key": "4D1btsFgbEQuvRZTbkqUCdC1btMGSN8a2K7Z8Go2t2YgLUFhbZuKwva59PyKJ7Ndh7NHQPpDCjQXGb49cAzjvhDhVVWR5J1pyvpfWc2rhkJNyGZ2xfXaFDNWkgc2Dnhyb3KteHZ2wXUZRyfAgYKNFg8XDvqKF8ns9cB3UnGbYn7pTeZDphtwLrFezExadbDC1PtSEizYNYye52AoskAYrCoiUnzk3TKocwYUdmaufTmH9tYepheyV8MbPFKSDpJqXFV6ZwiQ3mgRrvmphtXz4Xbd4YiG67g878dvsGVMTTcQ8DWYX1zYXZ8xFyJZy2G2tHB7vbELJGvrFfDfxuQtXSmU5dW7TKPnbcg2mb4dk5TiTN9LH",
+        "type": 2
     }
 }
 ```
@@ -117,14 +117,14 @@ args :["bankname","使用的法币名称","使用的Token名字","管理员的�
 ```
 请求：
 {
-    "timestamp": 1550825585, 
-    "fromid": "MIIBCgKCAQEA12ytFRV9NMC6LWh8HGPSQSoxKjwgBZ+3DrcVgKEj9t2a6AOVNMQNl9sH87Bkp208UFoneA0j6ry9s8l2da1a5fRj2opRPFF2S3cK7AhVzHHe7WNQESgYLpHxORxFC5Y5C5LGa0cj6megxu95GvEu61lbkxmScdWWfLiLLhI5Cr/5jOaFzNahsx1W3tdD66EkYMqKaCED67TUjVRU2b0EOTVz/Yw5xJSerSz35WDk4uo19rHt+Vn91DmbT+CVpooGQeTdiPbX2d39LMafqLrWOUgRhOAs3jlS8x9v0ERiLQWV9HMwABjQs+DmMwB7YW+Zxq62CrU5wzsPP6uNbDWXGwIDAQAB", 
-    "func": "addbank", 
+    "timestamp": 1551153467,
+    "fromid": "e14Lihsy8n7MBnQvUMooQWy9exJ7j3evooxmhXjaJwtizR",
+    "func": "addbank",
     "args": [
-        "bankA", 
-        "USD", 
-        "TokenA", 
-        "MIIBCgKCAQEAvMk0UUJK0r1wKbuqBlrEphKK7UR/EFOCz7p5oAyKpqX2hBZZQgaiQc9ebZRouGj+Giui2/S1eZDHAVzqeYNQ665l/TjvJerHTphp2NRVyBDESawuQxnyLDx81dY/iEPN9yg0YzXpssN8SvTOslo15O2SnkxJ6Wkno90pg34jjIM0oZWQ/K3u4W1alN9urOzYKzcC6ycJKbeDfBTHhEF/vm+HpzyHDsXNQ6Ax85CODu74+SE6JLqIBek0dSSn09VzWcS3C6tD/4+0IoqTb01MdoT72toUYUTV5p1zEJBbmr4/VJXkaJ4ecgraNe6URDl/TlMV5UtMExhdBqErhTXUlQIDAQAB"
+        "bankA",
+        "USD",
+        "TokenA",
+        "e1dzoVvkTN1frBnmWnKy7wmFRim8UWaf34Ej1yQ4AP4D1c"
     ]
 }
 ```
@@ -144,7 +144,7 @@ args :["bankname","使用的法币名称","使用的Token名字","管理员的�
         "currencyCount": 0, 	//	法币池值
         "exchangemap": { }, 	//	汇率表，只需要指定法币即可，例如 {"USD2HKD":7.0,"HKD2USD":0.14}
         "fiexedexchangemap": { }, 	//	固定汇率表
-        "mangername": "5e9c47ef7d0565c43a4d17d53f0fc0da"	//	管理员ID
+        "mangername": "e1dzoVvkTN1frBnmWnKy7wmFRim8UWaf34Ej1yQ4AP4D1c"	//	管理员ID
     }
 }
 ```
@@ -168,11 +168,11 @@ args :["isfixedmap","newvalue"]
 ```
 请求：
 {
-    "timestamp": 1550825759, 
-    "fromid": "MIIBCgKCAQEAzRjSSSk5Y4Rve2Yk4fViAnSa01iB6d35qqsWoNs/F4XoRTxp03j8jVGWnJFbG+oAoSnWjbf7Ba7K6BN5ClKDwRjh1T6DEiJAJmfzLArpZrMZbP7JnLCV4TYmOUPDzHSKz9//23NZO6wuhDTgwEqxPhSBe2zaNBI7PQkM6WNdc1ldN+Km6cwxg0P2mn+ltjKVjh4NY3LEBI45vs6vgO+8aZLVjfXqTM6DCMqZTGo6/IzU3N+AwtLR/m7KkDMFZkQGnj8J9+fn7WPqV+Dr9UxA7B7l1Pkm2BaosBKREjRuiU8oBTnoJLe/PTdSrgLblEwKqJGkwYRen7/JUsq9nz7s6wIDAQAB", 
-    "func": "setexchanemap", 
+    "timestamp": 1551153651,
+    "fromid": "e13dZV5pMXpY66Pr2HH6q7BfVZ5BzZHvRowjAxvCxJXM9Y",
+    "func": "setexchanemap",
     "args": [
-        "false", 
+        "false",
         "{\"USD2HKD\":7.0,\"HKD2USD\":0.14}"
     ]
 }
@@ -181,22 +181,22 @@ args :["isfixedmap","newvalue"]
 ```
 回应：  
 {
-    "errmsg": "sucess", 
-    "txid": "aea750280173a0dcb9b6e5f17362585b809968f1c8818fd376cc89bce0ad4191", 
-    "valid_code": "VALID", 
+    "errmsg": "sucess",
+    "txid": "e5c29d9cb46858bc553b8281ec66763f4b2c6402319d42a406653cdf2cf5d430",
+    "valid_code": "VALID",
     "data": {
-        "bankname": "bankB", 
-        "chip": "TokenB", 
-        "chiplimit": 1000000, 
-        "chipused": 0, 
-        "currency": "HKD", 
-        "currencyCount": 0, 
+        "bankname": "bankB",
+        "chip": "TokenB",
+        "chiplimit": 1000000,
+        "chipused": 0,
+        "currency": "HKD",
+        "currencyCount": 0,
         "exchangemap": {
-            "HKD2USD": 0.14, 
+            "HKD2USD": 0.14,
             "USD2HKD": 7
-        }, 
-        "fiexedexchangemap": { }, 
-        "mangername": "854c7458f81ecd02cb2d7d05503ea272"
+        },
+        "fiexedexchangemap": {},
+        "mangername": "e13dZV5pMXpY66Pr2HH6q7BfVZ5BzZHvRowjAxvCxJXM9Y"
     }
 }
 ```
@@ -208,12 +208,12 @@ args :["目标用户","目标货币类型","数量"]
 ```
 请求：
 {
-    "timestamp": 1550825632, 
-    "fromid": "MIIBCgKCAQEAvMk0UUJK0r1wKbuqBlrEphKK7UR/EFOCz7p5oAyKpqX2hBZZQgaiQc9ebZRouGj+Giui2/S1eZDHAVzqeYNQ665l/TjvJerHTphp2NRVyBDESawuQxnyLDx81dY/iEPN9yg0YzXpssN8SvTOslo15O2SnkxJ6Wkno90pg34jjIM0oZWQ/K3u4W1alN9urOzYKzcC6ycJKbeDfBTHhEF/vm+HpzyHDsXNQ6Ax85CODu74+SE6JLqIBek0dSSn09VzWcS3C6tD/4+0IoqTb01MdoT72toUYUTV5p1zEJBbmr4/VJXkaJ4ecgraNe6URDl/TlMV5UtMExhdBqErhTXUlQIDAQAB", 
-    "func": "cashin", 
+    "timestamp": 1551153525,
+    "fromid": "e1dzoVvkTN1frBnmWnKy7wmFRim8UWaf34Ej1yQ4AP4D1c",
+    "func": "cashin",
     "args": [
-        "MIIBCgKCAQEAyyJx9RA9C/ttxblz+XY+Y3myyISxVEe7P7TiFAlIMTTlJKj5TFE1xxiKTQ3l8r10G6mRGBcKFHVTcSYe3t5vW7B+h+Yb+8S8hc+Vk0BRN89BzLsn28X96GfV2KAXGOfZXWbwnzBrolGUuFRqXqVQQORdVl4ToYcnb3secXxCWrerynvguzlDYwmXmtwddXbkeh0w47nrAtFKHIObIYHHXbMSr7kDyp63zvzxg6Ao20Bh0ZXgxmli2rcW9XLSpDS0VAlWeBRMnKYlRsoj4VZpF7UmChmDVpq2pzlMLzRfOHoxCugTSkJm4vYn/gsHKsFxZqR6x98AWCrNINhqxpGA/QIDAQAB", 
-        "USD", 
+        "e122aNbAASxBPMRcpEL2Eut98sDFfjhH9cGxKYxEdwAR6s",
+        "USD",
         "2000"
     ]
 }
@@ -222,16 +222,16 @@ args :["目标用户","目标货币类型","数量"]
 ```
 回应：  
 {
-    "errmsg": "sucess", 
-    "txid": "1bfae83fb84c7b7d34e499cfb655d5577fcfd9e95c5c28c7ee4b406f339499d7", 
-    "valid_code": "VALID", 
+    "errmsg": "sucess",
+    "txid": "19ea0f7e1e19db5b6ecb60d1c6dd76c72d90280f8f391db5884d01cdaa5ef178",
+    "valid_code": "VALID",
     "data": {
         "balance": {
             "USD": 2000
-        }, 
-        "id": "56d4dd669c45f7aa5a8d92dc4414e081", 
-        "lockedbalance": { }, 
-        "pub_key": "MIIBCgKCAQEAyyJx9RA9C/ttxblz+XY+Y3myyISxVEe7P7TiFAlIMTTlJKj5TFE1xxiKTQ3l8r10G6mRGBcKFHVTcSYe3t5vW7B+h+Yb+8S8hc+Vk0BRN89BzLsn28X96GfV2KAXGOfZXWbwnzBrolGUuFRqXqVQQORdVl4ToYcnb3secXxCWrerynvguzlDYwmXmtwddXbkeh0w47nrAtFKHIObIYHHXbMSr7kDyp63zvzxg6Ao20Bh0ZXgxmli2rcW9XLSpDS0VAlWeBRMnKYlRsoj4VZpF7UmChmDVpq2pzlMLzRfOHoxCugTSkJm4vYn/gsHKsFxZqR6x98AWCrNINhqxpGA/QIDAQAB", 
+        },
+        "id": "e122aNbAASxBPMRcpEL2Eut98sDFfjhH9cGxKYxEdwAR6s",
+        "lockedbalance": {},
+        "pub_key": "4D1btsFgbEQuw3aCeAgrEiqRBoNBabW8jd9L14pcTbGrE5Ub41A8fTUU6k3taUt5LeAqX1D4dEmsYou6PvVxJnhLcDBJMMvvtGdhj61DR9hRZZVzMBMBMewvPANkdAdGkRBHwWcUh6z6iU9AWAmVUfmZbzDvaqXpBkh4cMddg2sfhxAHhr419j7iU5zcmErEGjfB8Y1peFLUibMxacES9V11qP7aYah4iFmEk6r8TDxfnG4JX5dTFmdvaBmoADDNXsoE6A7ANxsUBCLCtw56ZRDABwVAJNy6uFC2TGrftujNEXnVMnt6Dg4AGVQ6AyrEeZpd2C5LHg7vW91roExXQrZsRU3VQvjFMVrAR2wrbebVEC5CH",
         "type": 2
     }
 }
@@ -244,12 +244,12 @@ args :["目标用户","目标货币类型","数量"]
 ```
 请求：
 {
-    "timestamp": 1550825653, 
-    "fromid": "MIIBCgKCAQEAvMk0UUJK0r1wKbuqBlrEphKK7UR/EFOCz7p5oAyKpqX2hBZZQgaiQc9ebZRouGj+Giui2/S1eZDHAVzqeYNQ665l/TjvJerHTphp2NRVyBDESawuQxnyLDx81dY/iEPN9yg0YzXpssN8SvTOslo15O2SnkxJ6Wkno90pg34jjIM0oZWQ/K3u4W1alN9urOzYKzcC6ycJKbeDfBTHhEF/vm+HpzyHDsXNQ6Ax85CODu74+SE6JLqIBek0dSSn09VzWcS3C6tD/4+0IoqTb01MdoT72toUYUTV5p1zEJBbmr4/VJXkaJ4ecgraNe6URDl/TlMV5UtMExhdBqErhTXUlQIDAQAB", 
-    "func": "cashout", 
+    "timestamp": 1551153546,
+    "fromid": "e1dzoVvkTN1frBnmWnKy7wmFRim8UWaf34Ej1yQ4AP4D1c",
+    "func": "cashout",
     "args": [
-        "MIIBCgKCAQEAyyJx9RA9C/ttxblz+XY+Y3myyISxVEe7P7TiFAlIMTTlJKj5TFE1xxiKTQ3l8r10G6mRGBcKFHVTcSYe3t5vW7B+h+Yb+8S8hc+Vk0BRN89BzLsn28X96GfV2KAXGOfZXWbwnzBrolGUuFRqXqVQQORdVl4ToYcnb3secXxCWrerynvguzlDYwmXmtwddXbkeh0w47nrAtFKHIObIYHHXbMSr7kDyp63zvzxg6Ao20Bh0ZXgxmli2rcW9XLSpDS0VAlWeBRMnKYlRsoj4VZpF7UmChmDVpq2pzlMLzRfOHoxCugTSkJm4vYn/gsHKsFxZqR6x98AWCrNINhqxpGA/QIDAQAB", 
-        "USD", 
+        "e122aNbAASxBPMRcpEL2Eut98sDFfjhH9cGxKYxEdwAR6s",
+        "USD",
         "100"
     ]
 }
@@ -258,16 +258,16 @@ args :["目标用户","目标货币类型","数量"]
 ```
 回应：  
 {
-    "errmsg": "sucess", 
-    "txid": "12a7fc5304b62f5d2e81823764ed8d2ef8cd1caa639366ac5f3421e6fd81be78", 
-    "valid_code": "VALID", 
+    "errmsg": "sucess",
+    "txid": "e277751a4445321eeaeae3121a31c6cafee363d793f26e02a77a3b409b48547b",
+    "valid_code": "VALID",
     "data": {
         "balance": {
             "USD": 1900
-        }, 
-        "id": "56d4dd669c45f7aa5a8d92dc4414e081", 
-        "lockedbalance": { }, 
-        "pub_key": "MIIBCgKCAQEAyyJx9RA9C/ttxblz+XY+Y3myyISxVEe7P7TiFAlIMTTlJKj5TFE1xxiKTQ3l8r10G6mRGBcKFHVTcSYe3t5vW7B+h+Yb+8S8hc+Vk0BRN89BzLsn28X96GfV2KAXGOfZXWbwnzBrolGUuFRqXqVQQORdVl4ToYcnb3secXxCWrerynvguzlDYwmXmtwddXbkeh0w47nrAtFKHIObIYHHXbMSr7kDyp63zvzxg6Ao20Bh0ZXgxmli2rcW9XLSpDS0VAlWeBRMnKYlRsoj4VZpF7UmChmDVpq2pzlMLzRfOHoxCugTSkJm4vYn/gsHKsFxZqR6x98AWCrNINhqxpGA/QIDAQAB", 
+        },
+        "id": "e122aNbAASxBPMRcpEL2Eut98sDFfjhH9cGxKYxEdwAR6s",
+        "lockedbalance": {},
+        "pub_key": "4D1btsFgbEQuw3aCeAgrEiqRBoNBabW8jd9L14pcTbGrE5Ub41A8fTUU6k3taUt5LeAqX1D4dEmsYou6PvVxJnhLcDBJMMvvtGdhj61DR9hRZZVzMBMBMewvPANkdAdGkRBHwWcUh6z6iU9AWAmVUfmZbzDvaqXpBkh4cMddg2sfhxAHhr419j7iU5zcmErEGjfB8Y1peFLUibMxacES9V11qP7aYah4iFmEk6r8TDxfnG4JX5dTFmdvaBmoADDNXsoE6A7ANxsUBCLCtw56ZRDABwVAJNy6uFC2TGrftujNEXnVMnt6Dg4AGVQ6AyrEeZpd2C5LHg7vW91roExXQrZsRU3VQvjFMVrAR2wrbebVEC5CH",
         "type": 2
     }
 }
@@ -281,13 +281,13 @@ args :["目标用户的公钥或者ID","货币类型","数量","是否是从lock
 ```
 请求：
 {
-    "timestamp": 1550825674, 
-    "fromid": "MIIBCgKCAQEAyyJx9RA9C/ttxblz+XY+Y3myyISxVEe7P7TiFAlIMTTlJKj5TFE1xxiKTQ3l8r10G6mRGBcKFHVTcSYe3t5vW7B+h+Yb+8S8hc+Vk0BRN89BzLsn28X96GfV2KAXGOfZXWbwnzBrolGUuFRqXqVQQORdVl4ToYcnb3secXxCWrerynvguzlDYwmXmtwddXbkeh0w47nrAtFKHIObIYHHXbMSr7kDyp63zvzxg6Ao20Bh0ZXgxmli2rcW9XLSpDS0VAlWeBRMnKYlRsoj4VZpF7UmChmDVpq2pzlMLzRfOHoxCugTSkJm4vYn/gsHKsFxZqR6x98AWCrNINhqxpGA/QIDAQAB", 
-    "func": "transfer", 
+    "timestamp": 1551153567,
+    "fromid": "e122aNbAASxBPMRcpEL2Eut98sDFfjhH9cGxKYxEdwAR6s",
+    "func": "transfer",
     "args": [
-        "MIIBCgKCAQEA0rhlfneD/hmY+yS95P8c65seVOEfVRfZEV7FIF7GaGMEX8GmE1444amo4VL3vB+DiSSW8KzKZ4TmPWi3Tm5IKL6GiUCl7sSYXxplqW+uApyLT0Zpn4Hgbf6JPj0uvLDXAH2QIty84G50tCeFm5mNrrs197AWcZBBSs+UsP8Ug/oDrbgh1NR6yPOeYv9gEmQ2ARqaq9iAuw3hjjSxTHW8wfFGx0QlVKuKZN9RTbnNMMwhZU5myUXvUMFUzGm+X99ck7Vda8bAlGBzRBSjzzMXRjL46ojcfBag1ERr+5FjuDJ9dyV/iZh77daEuYeTixmkIphQreRCsZid9ljdgVIdZQIDAQAB", 
-        "USD", 
-        "100", 
+        "e1dW9MvoiNX4SajEU1VVVMkYsL2ehijSmhRbVWUKXPXXYk",
+        "USD",
+        "100",
         "false"
     ]
 }
@@ -296,16 +296,16 @@ args :["目标用户的公钥或者ID","货币类型","数量","是否是从lock
 ```
 回应：  
 {
-    "errmsg": "sucess", 
-    "txid": "d0e6d15b2f935e333c176b5860e394fc55b653884704940eef9316fc4453573d", 
-    "valid_code": "VALID", 
+    "errmsg": "sucess",
+    "txid": "194aab5e7da5329fc95297d466a3e531b2ad7f9aa22c48ccddbf4b1a2899303c",
+    "valid_code": "VALID",
     "data": {
         "balance": {
             "USD": 1800
-        }, 
-        "id": "56d4dd669c45f7aa5a8d92dc4414e081", 
-        "lockedbalance": { }, 
-        "pub_key": "MIIBCgKCAQEAyyJx9RA9C/ttxblz+XY+Y3myyISxVEe7P7TiFAlIMTTlJKj5TFE1xxiKTQ3l8r10G6mRGBcKFHVTcSYe3t5vW7B+h+Yb+8S8hc+Vk0BRN89BzLsn28X96GfV2KAXGOfZXWbwnzBrolGUuFRqXqVQQORdVl4ToYcnb3secXxCWrerynvguzlDYwmXmtwddXbkeh0w47nrAtFKHIObIYHHXbMSr7kDyp63zvzxg6Ao20Bh0ZXgxmli2rcW9XLSpDS0VAlWeBRMnKYlRsoj4VZpF7UmChmDVpq2pzlMLzRfOHoxCugTSkJm4vYn/gsHKsFxZqR6x98AWCrNINhqxpGA/QIDAQAB", 
+        },
+        "id": "e122aNbAASxBPMRcpEL2Eut98sDFfjhH9cGxKYxEdwAR6s",
+        "lockedbalance": {},
+        "pub_key": "4D1btsFgbEQuw3aCeAgrEiqRBoNBabW8jd9L14pcTbGrE5Ub41A8fTUU6k3taUt5LeAqX1D4dEmsYou6PvVxJnhLcDBJMMvvtGdhj61DR9hRZZVzMBMBMewvPANkdAdGkRBHwWcUh6z6iU9AWAmVUfmZbzDvaqXpBkh4cMddg2sfhxAHhr419j7iU5zcmErEGjfB8Y1peFLUibMxacES9V11qP7aYah4iFmEk6r8TDxfnG4JX5dTFmdvaBmoADDNXsoE6A7ANxsUBCLCtw56ZRDABwVAJNy6uFC2TGrftujNEXnVMnt6Dg4AGVQ6AyrEeZpd2C5LHg7vW91roExXQrZsRU3VQvjFMVrAR2wrbebVEC5CH",
         "type": 2
     }
 }
@@ -319,13 +319,13 @@ args :["付出的货币类型","目标货币类型","数量","是否使用固定
 ```
 请求：
 {
-    "timestamp": 1550825695, 
-    "fromid": "MIIBCgKCAQEAyyJx9RA9C/ttxblz+XY+Y3myyISxVEe7P7TiFAlIMTTlJKj5TFE1xxiKTQ3l8r10G6mRGBcKFHVTcSYe3t5vW7B+h+Yb+8S8hc+Vk0BRN89BzLsn28X96GfV2KAXGOfZXWbwnzBrolGUuFRqXqVQQORdVl4ToYcnb3secXxCWrerynvguzlDYwmXmtwddXbkeh0w47nrAtFKHIObIYHHXbMSr7kDyp63zvzxg6Ao20Bh0ZXgxmli2rcW9XLSpDS0VAlWeBRMnKYlRsoj4VZpF7UmChmDVpq2pzlMLzRfOHoxCugTSkJm4vYn/gsHKsFxZqR6x98AWCrNINhqxpGA/QIDAQAB", 
-    "func": "exchange", 
+    "timestamp": 1551153693,
+    "fromid": "e122aNbAASxBPMRcpEL2Eut98sDFfjhH9cGxKYxEdwAR6s",
+    "func": "exchange",
     "args": [
-        "USD", 
-        "TokenA", 
-        "500", 
+        "USD",
+        "TokenB",
+        "100",
         "false"
     ]
 }
@@ -335,18 +335,55 @@ args :["付出的货币类型","目标货币类型","数量","是否使用固定
 回应：  
 
 {
-    "errmsg": "sucess", 
-    "txid": "22508bc94142a6514f6c99f2c3d9993cd0910773f9e2a2ec75fba89c21ac75ed", 
-    "valid_code": "VALID", 
+    "errmsg": "sucess",
+    "txid": "9f58042349cf54d7478dbf43d1ab11282083f7510be4694d5f2bedb4f5b39a25",
+    "valid_code": "VALID",
     "data": {
         "balance": {
-            "TokenA": 500, 
-            "USD": 1300
-        }, 
-        "id": "56d4dd669c45f7aa5a8d92dc4414e081", 
-        "lockedbalance": { }, 
-        "pub_key": "MIIBCgKCAQEAyyJx9RA9C/ttxblz+XY+Y3myyISxVEe7P7TiFAlIMTTlJKj5TFE1xxiKTQ3l8r10G6mRGBcKFHVTcSYe3t5vW7B+h+Yb+8S8hc+Vk0BRN89BzLsn28X96GfV2KAXGOfZXWbwnzBrolGUuFRqXqVQQORdVl4ToYcnb3secXxCWrerynvguzlDYwmXmtwddXbkeh0w47nrAtFKHIObIYHHXbMSr7kDyp63zvzxg6Ao20Bh0ZXgxmli2rcW9XLSpDS0VAlWeBRMnKYlRsoj4VZpF7UmChmDVpq2pzlMLzRfOHoxCugTSkJm4vYn/gsHKsFxZqR6x98AWCrNINhqxpGA/QIDAQAB", 
+            "HKD": 700,
+            "TokenA": 400,
+            "TokenB": 700,
+            "USD": 1100
+        },
+        "id": "e122aNbAASxBPMRcpEL2Eut98sDFfjhH9cGxKYxEdwAR6s",
+        "lockedbalance": {},
+        "pub_key": "4D1btsFgbEQuw3aCeAgrEiqRBoNBabW8jd9L14pcTbGrE5Ub41A8fTUU6k3taUt5LeAqX1D4dEmsYou6PvVxJnhLcDBJMMvvtGdhj61DR9hRZZVzMBMBMewvPANkdAdGkRBHwWcUh6z6iU9AWAmVUfmZbzDvaqXpBkh4cMddg2sfhxAHhr419j7iU5zcmErEGjfB8Y1peFLUibMxacES9V11qP7aYah4iFmEk6r8TDxfnG4JX5dTFmdvaBmoADDNXsoE6A7ANxsUBCLCtw56ZRDABwVAJNy6uFC2TGrftujNEXnVMnt6Dg4AGVQ6AyrEeZpd2C5LHg7vW91roExXQrZsRU3VQvjFMVrAR2wrbebVEC5CH",
         "type": 2
     }
 }
+```
+
+###golang编程接口  
+所有对外的API位于client.go  
+```
+把RSA公钥编码成字符串
+func PublicKeyToString(publicKey *rsa.PublicKey) string
+
+从公钥获取用户ID（钱包ID）
+func PublicKeyToID(publicKey *rsa.PublicKey) string
+
+编码发起函数调用的req字符串
+func NewRequest(callID string, function string, args []string) (string, error)
+callID      -- 调用者的ID或者使用PublicKeyToString编码的公钥
+function    -- 要调用的功能
+args        -- 调用function时使用的参数，如果其中一个参数是JSON格式，则需要序列化成字符串
+
+获取请求的签名
+func SignRequest(request string, privatekey *rsa.PrivateKey) (string, error)
+request     -- NewRequest返回的字符串
+
+发起调用
+func CallAPI(apiURI string, request string, callersig string, optusersig string) (string, error) 
+apiURI  -- proxy所在的HTTP URL
+request -- NewRequest返回的字符串
+callersig -- 调用者的签名
+optusersig -- 参与者的签名，除了cashin，cashout 功能这个不能为空外，其它功能，这个参数为空字符串
+
+通常调用流程：
+// example
+//   req,_ := NewRequest(PublicKeyToID(publicKey),"adduser",[]string{PublicKeyToString(publicKey)},)
+//   callersig,_ :=SignRequest(req,privateKey)
+//   rsp,err := CallAPI("http://127.0.0.1:8789/callapi.do",req,callersig,"")
+//   parse rsp ...
+更多例子，参考：https://github.com/Clivebi/xcoin/blob/master/proxy/proxy_test.go
 ```

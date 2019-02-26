@@ -3,13 +3,10 @@ package proxy
 import (
 	"bytes"
 	"crypto"
-	"crypto/md5"
 	"crypto/rand"
 	"crypto/rsa"
 	"crypto/sha256"
 	"crypto/x509"
-	"encoding/base64"
-	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"io/ioutil"
@@ -39,14 +36,13 @@ type sendBuffer struct {
 //PublicKeyToString get base64 encode publick key
 func PublicKeyToString(publicKey *rsa.PublicKey) string {
 	buf := x509.MarshalPKCS1PublicKey(publicKey)
-	return base64.StdEncoding.EncodeToString(buf)
+	return Base58Encode(buf)
 }
 
 //PublicKeyToID convert publick key to user ID
 func PublicKeyToID(publicKey *rsa.PublicKey) string {
-	hs := md5.New()
-	hs.Write([]byte(PublicKeyToString(publicKey)))
-	return hex.EncodeToString(hs.Sum(nil))
+	buf := x509.MarshalPKCS1PublicKey(publicKey)
+	return EncodeWalletAddress(buf)
 }
 
 //NewRequest create request from caller
@@ -68,7 +64,7 @@ func SignRequest(request string, privatekey *rsa.PrivateKey) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return base64.StdEncoding.EncodeToString(buf), nil
+	return Base58Encode(buf), nil
 }
 
 //CallAPI send request and receive response
@@ -76,7 +72,7 @@ func SignRequest(request string, privatekey *rsa.PrivateKey) (string, error) {
 //   req,_ := NewRequest(PublicKeyToID(publicKey),"adduser",PublicKeyToString(publicKey))
 //   callersig,_ :=SignRequest(req,privateKey)
 //   rsp,err := CallAPI("http://127.0.0.1:8789/callapi.do",req,callersig,"")
-func CallAPI(apiUri string, request string, callersig string, optusersig string) (string, error) {
+func CallAPI(apiURI string, request string, callersig string, optusersig string) (string, error) {
 	sig := &Signature{
 		Caller:  callersig,
 		OptUser: optusersig,
@@ -94,7 +90,7 @@ func CallAPI(apiUri string, request string, callersig string, optusersig string)
 		return "", err
 	}
 	rd := bytes.NewReader(rbytes)
-	rsp, err := http.Post(apiUri, "application/json", rd)
+	rsp, err := http.Post(apiURI, "application/json", rd)
 	if err != nil {
 		return "", err
 	}

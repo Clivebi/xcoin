@@ -1,8 +1,6 @@
 package main
 
 import (
-	"crypto/md5"
-	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"github.com/hyperledger/fabric/core/chaincode/shim"
@@ -123,13 +121,11 @@ func (o *userManger) getUserFromID(name string, stub shim.ChaincodeStubInterface
 }
 
 func (o *userManger) getUserID(publickey string) string {
-	hs := md5.New()
-	hs.Write([]byte(publickey))
-	return hex.EncodeToString(hs.Sum(nil))
+	return EncodeWalletAddress(Base58Decode(publickey))
 }
 
 func (o *userManger) getUser(key string, stub shim.ChaincodeStubInterface) (*userItem, error) {
-	if len(key) != 32 {
+	if !IsWalletAddress(key) {
 		key = o.getUserID(key)
 	}
 	return o.getUserFromID(key, stub)

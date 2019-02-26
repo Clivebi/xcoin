@@ -5,7 +5,6 @@ import (
 	"crypto/rsa"
 	"crypto/sha256"
 	"crypto/x509"
-	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"github.com/hyperledger/fabric/core/chaincode/shim"
@@ -87,15 +86,12 @@ func (t *CoinChaincode) checkSignature(args string, sig string, key string, stub
 	if isDebug {
 		return nil
 	}
-	pkbuf, err := base64.StdEncoding.DecodeString(key)
-	if err != nil {
-		return err
-	}
+	pkbuf := Base58Decode(key)
 	pk, err := x509.ParsePKCS1PublicKey(pkbuf)
 	if err != nil {
 		return err
 	}
-	signature, err := base64.StdEncoding.DecodeString(sig)
+	signature := Base58Decode(sig)
 	if err != nil {
 		return err
 	}
