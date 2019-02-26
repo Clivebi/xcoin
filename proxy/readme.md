@@ -4,15 +4,15 @@
    Post 的JSON格式如下：
    {  
    	 "req":"请求数据包由Request序列化成字符串",  
-   	 "sig":"签名信息Signature序列化字符串"  
+   	 "sig":"签名信息由Signature序列化成字符串"  
    }
 
    Request 如下：
    {
-    "timestamp": 1550825521,     //时间戳，用于对抗 重放攻击
-    "fromid": "user public key", //调用者的ID或者公钥,如果是公钥，使用base58
-    "func": "adduser",           //要调用的功能函数
-    "args": ["arg1","arg2"]      //传递给功能函数的参数，字符串数组
+    "timestamp": 1550825521,        //时间戳，用于对抗重放攻击
+    "fromid": "user public key",    //调用者的ID或者公钥,如果是公钥，使用base58
+    "func": "adduser",              //要调用的功能函数
+    "args": ["arg1","arg2"]         //传递给功能函数的参数，字符串数组
    }
    调用不同的功能，需要不同的func和args参数
 
@@ -24,10 +24,10 @@
    其中，所有的功能调用，caller的签名是必须的，optuser的签名只有在需要在场证明的情况下才需要，目前只有cashin，cashout需要在场证明  
    即需要bank manger和用户同时在场，功能由bank manger调用，但是同时需要用户的签名  
    ```  
-2. 返回结果均是标准化的JSON，其格式如下   
+2. 返回结果为JSON字符串，其格式如下：   
 ```
 {
-    "errmsg": "sucess", 		//错误信息，成功为sucess，否则为具体的错误信息
+    "errmsg": "sucess",     //错误信息，成功为sucess，否则为具体的错误信息
     "txid": "e490e9149a12239e3a1f5c29aee2d912cbeb68bcae4d5f5ec45920422b226fd3", //transcation ID
     "valid_code": "VALID",  //transcation 有效性
     "data": {} 				//这个值为调用func之后返回的信息，json格式，根据func不同而不同
@@ -43,7 +43,7 @@
 func : "adduser"  
 args :["新增用户的RSA公钥"]  
 权限： 任何人都可以调用，第一个添加的用户为root账户  
-返回值：用户的信息，例子  
+返回值：新增用户的信息  
 ```
 请求：
 {
@@ -63,10 +63,10 @@ args :["新增用户的RSA公钥"]
     "txid": "e490e9149a12239e3a1f5c29aee2d912cbeb68bcae4d5f5ec45920422b226fd3", 
     "valid_code": "VALID", 
     "data": {
-        "balance": { }, // 用户的资产信息，例如 {"USD":100,"TokenA":800}
+        "balance": { },       // 用户的资产信息，例如 {"USD":100,"TokenA":800}
         "id": "e14Lihsy8n7MBnQvUMooQWy9exJ7j3evooxmhXjaJwtizR", //用户ID
         "lockedbalance": { }, // 用户的锁定资产信息
-        "pub_key": "4D1btsFgbEQuvgZS6pu7rmfweC3UH1QprFALPMDeXVo8dsw5brJWFegfQff5owgQvqsQmUJUW8JHvaKGxBVppugbzkihPDz49YrgEQfzASHvNUfY56GEMDHvVF3fhYZG8fKTJS32JZRpFFo865HFgTUF8fVkxjhwanGiQnf8NmDC5WoDeBeempAseknTbu6ScjbzaxKMU1vyX78KHR73ocoAyY8B7eUFurBqkYkYWjRNh9h9DmksHFus1ZBUUZKRXeyRnH7iTURob4RCQCeYCDwEZ9mud4cJZZbSiZVLT9LM3EXpVQpKDd81ricDfKtPshPzN7feWa7d1J5An2npRZsJsMxzHTCjWuPk8kSzM3mkWCDwz", 			 // 用户公钥
+        "pub_key": "4D1btsFgbEQuvgZS6pu7rmfweC3UH1QprFALPMDeXVo8dsw5brJWFegfQff5owgQvqsQmUJUW8JHvaKGxBVppugbzkihPDz49YrgEQfzASHvNUfY56GEMDHvVF3fhYZG8fKTJS32JZRpFFo865HFgTUF8fVkxjhwanGiQnf8NmDC5WoDeBeempAseknTbu6ScjbzaxKMU1vyX78KHR73ocoAyY8B7eUFurBqkYkYWjRNh9h9DmksHFus1ZBUUZKRXeyRnH7iTURob4RCQCeYCDwEZ9mud4cJZZbSiZVLT9LM3EXpVQpKDd81ricDfKtPshPzN7feWa7d1J5An2npRZsJsMxzHTCjWuPk8kSzM3mkWCDwz", // 用户公钥，base58编码
         "type": 0		// 0 root账户，1 bank manger  2 normal user
     }
 }
@@ -77,7 +77,7 @@ func : "getuser"
 args :["用户的public key或者用户ID"]  
 备注：用户ID在adduser之后返回  
 权限： 任何人都可以调用，既可以查询自己，也可以查询别人  
-返回值：用户的信息，例子  
+返回值：用户的信息  
 ```
 请求：
 {
@@ -113,7 +113,7 @@ args :["bankname","使用的法币名称","使用的Token名字","管理员的�
 权限： 只有root用户才能调用此接口  
 备注：每个银行只能使用一种法币和一种Token币，而且名字是全局排重的，就是不能重复，管理员需要先adduser  
 	 否则这个函数会调用失败，调用后，这个这个ID指定的用户被升级成银行管理员  
-返回值：银行的信息，例子  
+返回值：银行的信息  
 ```
 请求：
 {
@@ -136,13 +136,13 @@ args :["bankname","使用的法币名称","使用的Token名字","管理员的�
     "txid": "581614bd197abdc5d65a80ee76081a161810014cb4726c41d67cc24d5dcb48dc", 
     "valid_code": "VALID", 
     "data": {
-        "bankname": "bankA", 	//	银行名字
-        "chip": "TokenA", 		//	Token名字
-        "chiplimit": 0, 		//	Token限额，用户可使用这种Token的数量
-        "chipused": 0, 			//	已经使用的Token
-        "currency": "USD", 		//	法币名字
-        "currencyCount": 0, 	//	法币池值
-        "exchangemap": { }, 	//	汇率表，只需要指定法币即可，例如 {"USD2HKD":7.0,"HKD2USD":0.14}
+        "bankname": "bankA", 	    //	银行名字
+        "chip": "TokenA", 		    //	Token名字
+        "chiplimit": 0, 		    //	Token限额，用户可使用这种Token的数量
+        "chipused": 0, 			    //	已经使用的Token
+        "currency": "USD", 		    //	法币名字
+        "currencyCount": 0, 	    //	法币池值
+        "exchangemap": { }, 	    //	动态汇率表，只需要指定法币即可，例如 {"USD2HKD":7.0,"HKD2USD":0.14}
         "fiexedexchangemap": { }, 	//	固定汇率表
         "mangername": "e1dzoVvkTN1frBnmWnKy7wmFRim8UWaf34Ej1yQ4AP4D1c"	//	管理员ID
     }
@@ -203,7 +203,8 @@ args :["isfixedmap","newvalue"]
 ##法币充值  
 func : "cashin"  
 args :["目标用户","目标货币类型","数量"]   
-权限： 只有银行管理员能够调用，而且只能操作自己管理的银行，即第二个参数必须和自己管理银行的法币相同   
+权限： 只有银行管理员能够调用，而且只能操作自己管理的银行，即第二个参数必须和自己管理银行的法币相同  
+备注： 此接口需要在场验证，即双签名   
 返回值：充值后目标用户的账户信息，同addbank  
 ```
 请求：
@@ -240,7 +241,8 @@ args :["目标用户","目标货币类型","数量"]
 func : "cashout"  
 args :["目标用户","目标货币类型","数量"]      
 权限： 只有银行管理员能够调用，而且只能操作自己管理的银行，即第二个参数必须和自己管理银行的法币相同   
-返回值：提取后目标的账户信息，同addbank  
+备注： 此接口需要在场验证，即双签名   
+返回值：提取后目标的账户信息，同adduser  
 ```
 请求：
 {
@@ -277,7 +279,7 @@ func : "transfer"
 args :["目标用户的公钥或者ID","货币类型","数量","是否是从locked的资金转出"]   
 权限： 任何人都可以调用此接口   
 备注：普通用户可以转给普通用户，银行管理员可以转给普通用户，普通用户可以转个银行管理员，除此之外的转账将引发一个错误  
-返回值：转账后自己的账户信息，同addbank  
+返回值：转账后自己的账户信息，同adduser  
 ```
 请求：
 {
@@ -313,9 +315,9 @@ args :["目标用户的公钥或者ID","货币类型","数量","是否是从lock
 ```
 ##货币兑换  
 func : "exchange"  
-args :["付出的货币类型","目标货币类型","数量","是否使用固定汇率"]   
+args :["付出的货币类型","目标货币类型","付出的货币数量","是否使用固定汇率"]   
 权限： 任何人都可以调用此接口   
-返回值：兑换后自己的账户信息，同addbank  
+返回值：兑换后自己的账户信息，同adduser  
 ```
 请求：
 {
@@ -385,5 +387,5 @@ optusersig -- 参与者的签名，除了cashin，cashout 功能这个不能为�
 //   callersig,_ :=SignRequest(req,privateKey)
 //   rsp,err := CallAPI("http://127.0.0.1:8789/callapi.do",req,callersig,"")
 //   parse rsp ...
-更多例子，参考：https://github.com/Clivebi/xcoin/blob/master/proxy/proxy_test.go
 ```
+更多例子，参考：https://github.com/Clivebi/xcoin/blob/master/proxy/proxy_test.go
