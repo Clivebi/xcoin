@@ -21,6 +21,9 @@ type Response struct {
 func getResponse(payload string, txID string, Code string, err error) []byte {
 	var data map[string]interface{}
 	json.Unmarshal([]byte(payload), &data)
+	if data == nil {
+		data = map[string]interface{}{}
+	}
 	rsp := &Response{
 		ErrorMessage: "sucess",
 		TxID:         txID,

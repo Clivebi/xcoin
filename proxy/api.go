@@ -2,6 +2,7 @@ package proxy
 
 import (
 	"errors"
+	"fmt"
 	"net/http"
 )
 
@@ -43,6 +44,8 @@ func (o *APIHandler) handleCallAPI(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), 500)
 		return
 	}
+	fmt.Println("call hyperledge ")
+	fmt.Println(args)
 	buf := o.runner.SendRequest("callapi", args)
 	w.Write(buf)
 }

@@ -18,7 +18,7 @@ const (
 	mangerOfBankB = 2
 	normalUserA   = 3
 	normalUserB   = 4
-	apiURL        = "http://127.0.0.1:8789/callapi.do"
+	apiURL        = "http://192.168.200.133:8789/callapi.do"
 )
 
 func initEnv() {
