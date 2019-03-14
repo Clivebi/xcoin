@@ -45,20 +45,22 @@ type request struct {
 
 //AppRunner 合约调用器
 type AppRunner struct {
-	queue  chan *request
-	client *channel.Client
-	sdk    *fabsdk.FabricSDK
-	conf   *appConfig
+	queue   chan *request
+	client  *channel.Client
+	sdk     *fabsdk.FabricSDK
+	conf    *appConfig
+	confile string
 }
 
 //NewAppRunner 创建合约调用器
-func NewAppRunner() (*AppRunner, error) {
+func NewAppRunner(confile string) (*AppRunner, error) {
 	o := &AppRunner{
-		queue:  make(chan *request, 64),
-		client: nil,
-		sdk:    nil,
+		queue:   make(chan *request, 64),
+		client:  nil,
+		sdk:     nil,
+		confile: confile,
 	}
-	err := o.initClient()
+	err := o.initClient(confile)
 	if err != nil {
 		return nil, err
 	}
@@ -97,8 +99,8 @@ func (o *AppRunner) messageloop() {
 	}
 }
 
-func (o *AppRunner) initClient() error {
-	buf, err := ioutil.ReadFile("./runner.conf")
+func (o *AppRunner) initClient(confile string) error {
+	buf, err := ioutil.ReadFile(confile)
 	if err != nil {
 		return err
 	}
@@ -134,7 +136,7 @@ func (o *AppRunner) initClient() error {
 
 func (o *AppRunner) callCC(function string, args []string) []byte {
 	if o.client == nil {
-		err := o.initClient()
+		err := o.initClient(o.confile)
 		if err != nil {
 			return getResponse("", "", "", err)
 		}

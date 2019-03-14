@@ -8,6 +8,7 @@ import (
 	"log"
 	"net/http"
 	"net/url"
+	"os"
 	"time"
 )
 
@@ -60,7 +61,11 @@ func (s *CoinServer) ServerHttp() {
 }
 
 func main() {
-	run, err := proxy.NewAppRunner()
+	confile := "./runner.conf"
+	if len(os.Args) >= 2 {
+		confile = os.Args[1]
+	}
+	run, err := proxy.NewAppRunner(confile)
 	if err != nil {
 		fmt.Println(err)
 		return

@@ -389,3 +389,8 @@ optusersig -- 参与者的签名，除了cashin，cashout 功能这个不能为�
 //   parse rsp ...
 ```
 更多例子，参考：https://github.com/Clivebi/xcoin/blob/master/proxy/proxy_test.go
+
+##proxy运行方法  
+1. native运行  直接运行runner
+2. docker运行 ,切换到main目录，执行：>> docker build -t runner:v1 .
+                                 >> docker-compose -f ./docker-compose-runner.yaml up -d

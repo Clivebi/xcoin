@@ -1,0 +1,27 @@
+version: '2'
+
+networks:
+  byfn:
+services:
+ runner_base:
+    image: runner:v1
+    container_name: runner
+    environment:
+      - CORE_VM_ENDPOINT=unix:///host/var/run/docker.sock
+      - CORE_LOGGING_LEVEL=DEBUG
+    working_dir: /opt/gopath/src/github.com/hyperledger/xcoin/proxy/main
+    command: runner /etc/runner/runner_docker.conf
+    volumes:
+    - ../../run-network/crypto-config:/var/crypto-config
+    - ./:/etc/runner
+    - /var/run/:/host/var/run/
+    ports:
+      - 8789:8789
+    extra_hosts:
+      - "peer0.org1.example.com:10.0.2.15"
+      - "peer0.org2.example.com:10.0.2.15"
+      - "peer1.org1.example.com:10.0.2.15"
+      - "peer1.org2.example.com:10.0.2.15"
+      - "orderer.example.com:10.0.2.15"
+    networks:
+      - byfn
