@@ -1,4 +1,4 @@
-package proxy
+package api
 
 import (
 	"bytes"
@@ -17,6 +17,35 @@ import (
 	"strconv"
 	"time"
 )
+
+//Wallet wallet information
+type Wallet struct {
+	PublicKey string  `json:"pub_key"`
+	Address   string  `json:"address"`
+	Token     float64 `json:"token"`
+	Type      int     `json:"type"` // 0 root 1 other
+	Group     string  `json:"group"`
+}
+
+// Response  返回结构体
+type Response struct {
+	ErrorMessage string  `json:"errmsg"`
+	TxID         string  `json:"txid"`
+	TxValidCode  string  `json:"valid_code"`
+	Payload      *Wallet `json:"data"`
+}
+
+//Request 函数调用结构体
+type Request struct {
+	Time     int64    `json:"timestamp"` //时间戳
+	Function string   `json:"func"`      //调用函数
+	Args     []string `json:"args"`      //调用参数
+}
+
+type sendBuffer struct {
+	Req string `json:"req"`
+	Sig string `json:"sig"`
+}
 
 //SignWithECDSA signature request with ecdsa
 func SignWithECDSA(text []byte, pk *ecdsa.PrivateKey) (string, error) {
@@ -73,18 +102,6 @@ func PublicKeyToString(pubk interface{}) (string, error) {
 		return "", err
 	}
 	return base64.StdEncoding.EncodeToString(buf), nil
-}
-
-//Request 函数调用结构体
-type Request struct {
-	Time     int64    `json:"timestamp"` //时间戳
-	Function string   `json:"func"`      //调用函数
-	Args     []string `json:"args"`      //调用参数
-}
-
-type sendBuffer struct {
-	Req string `json:"req"`
-	Sig string `json:"sig"`
 }
 
 //NewRequest create request from caller

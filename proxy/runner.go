@@ -7,30 +7,14 @@ import (
 	"github.com/hyperledger/fabric-sdk-go/pkg/common/errors/retry"
 	"github.com/hyperledger/fabric-sdk-go/pkg/core/config"
 	"github.com/hyperledger/fabric-sdk-go/pkg/fabsdk"
+	"github.com/hyperledger/xcoin/proxy/api"
 	"io/ioutil"
 )
 
-//Wallet wallet information
-type Wallet struct {
-	PublicKey string  `json:"pub_key"`
-	Address   string  `json:"address"`
-	Token     float64 `json:"token"`
-	Type      int     `json:"type"` // 0 root 1 other
-	Group     string  `json:"group"`
-}
-
-// Response  返回结构体
-type Response struct {
-	ErrorMessage string  `json:"errmsg"`
-	TxID         string  `json:"txid"`
-	TxValidCode  string  `json:"valid_code"`
-	Payload      *Wallet `json:"data"`
-}
-
 func getResponse(payload string, txID string, Code string, err error) []byte {
-	data := &Wallet{}
+	data := &api.Wallet{}
 	json.Unmarshal([]byte(payload), &data)
-	rsp := &Response{
+	rsp := &api.Response{
 		ErrorMessage: "success",
 		TxID:         txID,
 		TxValidCode:  Code,
