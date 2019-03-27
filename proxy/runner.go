@@ -7,14 +7,14 @@ import (
 	"github.com/hyperledger/fabric-sdk-go/pkg/common/errors/retry"
 	"github.com/hyperledger/fabric-sdk-go/pkg/core/config"
 	"github.com/hyperledger/fabric-sdk-go/pkg/fabsdk"
-	"github.com/hyperledger/xcoin/proxy/api"
+	"github.com/hyperledger/xcoin/proxy/proxyapi"
 	"io/ioutil"
 )
 
 func getResponse(payload string, txID string, Code string, err error) []byte {
-	data := &api.Wallet{}
+	data := &proxyapi.Wallet{}
 	json.Unmarshal([]byte(payload), &data)
-	rsp := &api.Response{
+	rsp := &proxyapi.Response{
 		ErrorMessage: "success",
 		TxID:         txID,
 		TxValidCode:  Code,
