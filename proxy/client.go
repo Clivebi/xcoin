@@ -63,15 +63,7 @@ func StringToPublicKey(text string) (interface{}, error) {
 	if err != nil {
 		return nil, err
 	}
-	key, err := x509.ParsePKIXPublicKey(buf)
-	if err != nil {
-		return nil, err
-	}
-	pubk, ok := key.(*ecdsa.PublicKey)
-	if !ok {
-		return nil, errors.New("public key text not contain a ecdsa public key")
-	}
-	return pubk, nil
+	return x509.ParsePKIXPublicKey(buf)
 }
 
 //PublicKeyToString convert rsa or ecdsa public key to string
