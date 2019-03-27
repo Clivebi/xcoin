@@ -1,7 +1,7 @@
 package proxy
 
 import (
-	"errors"
+	//"errors"
 	"net/http"
 )
 
@@ -28,9 +28,9 @@ func (o *APIHandler) copyArg(r *http.Request, names []string) ([]string, error) 
 	ret := make([]string, len(names))
 	for i, v := range names {
 		val := r.FormValue(v)
-		if len(val) == 0 {
-			return []string{}, errors.New("argument of:" + v + " is missing")
-		}
+		//if len(val) == 0 {
+		//	return []string{}, errors.New("argument of:" + v + " is missing")
+		//}
 		ret[i] = val
 	}
 	return ret, nil

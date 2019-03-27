@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"github.com/hyperledger/xcoin/proxy"
 	"io/ioutil"
-	"log"
 	"net/http"
 	"net/url"
 	"os"
@@ -23,19 +22,19 @@ func (s *CoinServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		buf, err := ioutil.ReadAll(r.Body)
 		if err != nil {
 			http.Error(w, err.Error(), 500)
-			log.Println("read json body failed", err)
+			fmt.Println("read json body failed", err)
 			return
 		}
 		if buf == nil || len(buf) == 0 {
 			http.Error(w, err.Error(), 500)
-			log.Println("read json body failed", err)
+			fmt.Println("read json body failed", err)
 			return
 		}
 		ret := make(map[string]string)
 		err = json.Unmarshal(buf, &ret)
 		if err != nil {
 			http.Error(w, err.Error(), 500)
-			log.Println("Unmarshal json failed", err)
+			fmt.Println("Unmarshal json failed", err)
 			return
 		}
 		for i, v := range ret {
