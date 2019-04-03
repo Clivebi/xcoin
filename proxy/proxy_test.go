@@ -6,6 +6,8 @@ import (
 	"crypto/rsa"
 	"crypto/sha256"
 	"encoding/hex"
+	"errors"
+	api "github.com/hyperledger/xcoin/proxy/proxyapi"
 	"testing"
 	"time"
 )
@@ -34,7 +36,7 @@ func initEnv() {
 }
 
 func addressFromPublicKey(pubkey interface{}) string {
-	text, _ := PublicKeyToString(pubkey)
+	text, _ := api.PublicKeyToString(pubkey)
 	hashed := sha256.Sum256([]byte(text))
 	return hex.EncodeToString(hashed[:])
 }
@@ -42,7 +44,7 @@ func addressFromPublicKey(pubkey interface{}) string {
 func TestUser(t *testing.T) {
 	initEnv()
 	t.Log("add root")
-	wallet, err := RegisgerWallet(apiURL, addressFromPublicKey(publickkeys[rootUser]),
+	wallet, err := api.RegisgerWallet(apiURL, addressFromPublicKey(publickkeys[rootUser]),
 		publickkeys[rootUser], "USD")
 	if err != nil {
 		t.Error(err)
@@ -50,7 +52,7 @@ func TestUser(t *testing.T) {
 	}
 	t.Log(wallet)
 
-	wallet, err = RegisgerWallet(apiURL, addressFromPublicKey(publickkeys[normalUserA]),
+	wallet, err = api.RegisgerWallet(apiURL, addressFromPublicKey(publickkeys[normalUserA]),
 		publickkeys[normalUserA], "USD")
 	if err != nil {
 		t.Error(err)
@@ -58,7 +60,7 @@ func TestUser(t *testing.T) {
 	}
 	t.Log(wallet)
 
-	wallet, err = RegisgerWallet(apiURL, addressFromPublicKey(publickkeys[normalUserB]),
+	wallet, err = api.RegisgerWallet(apiURL, addressFromPublicKey(publickkeys[normalUserB]),
 		publickkeys[normalUserB], "USD")
 	if err != nil {
 		t.Error(err)
@@ -69,14 +71,14 @@ func TestUser(t *testing.T) {
 
 func TestSend(t *testing.T) {
 	t.Log("Admin send 1000 to userA")
-	wallet, err := Send(apiURL, addressFromPublicKey(publickkeys[rootUser]),
+	wallet, err := api.Send(apiURL, addressFromPublicKey(publickkeys[rootUser]),
 		addressFromPublicKey(publickkeys[normalUserA]), 1000, privatekeys[rootUser])
 	if err != nil {
 		t.Error(err)
 		return
 	}
 	time.Sleep(5 * time.Second)
-	walletA, err := GetWallet(apiURL, addressFromPublicKey(publickkeys[normalUserA]))
+	walletA, err := api.GetWallet(apiURL, addressFromPublicKey(publickkeys[normalUserA]))
 	if err != nil {
 		t.Error(err)
 		return
@@ -84,17 +86,36 @@ func TestSend(t *testing.T) {
 	t.Log("After send Admin Token:", wallet.Token, " userA Token:", walletA.Token)
 
 	t.Log("userA send 500 to userB")
-	wallet, err = Send(apiURL, addressFromPublicKey(publickkeys[normalUserA]),
+	wallet, err = api.Send(apiURL, addressFromPublicKey(publickkeys[normalUserA]),
 		addressFromPublicKey(publickkeys[normalUserB]), 500, privatekeys[normalUserA])
 	if err != nil {
 		t.Error(err)
 		return
 	}
 	time.Sleep(5 * time.Second)
-	walletA, err = GetWallet(apiURL, addressFromPublicKey(publickkeys[normalUserB]))
+	walletA, err = api.GetWallet(apiURL, addressFromPublicKey(publickkeys[normalUserB]))
 	if err != nil {
 		t.Error(err)
 		return
 	}
 	t.Log("After send userA Token:", wallet.Token, " userB Token:", walletA.Token)
+}
+
+func TestDBValue(t *testing.T) {
+	t.Log("set key =/group1/task0/key1 value= 1000")
+	err := api.SetValueToBlockChain(apiURL, "/group1/task0/key1", "1000")
+	if err != nil {
+		t.Error(err)
+		return
+	}
+	time.Sleep(2 * time.Second)
+	value, err := api.GetValueFromBlockChain(apiURL, "/group1/task0/key1")
+	if err != nil {
+		t.Error(err)
+		return
+	}
+	if value != "1000" {
+		t.Error(errors.New("value not euqal set"))
+		return
+	}
 }

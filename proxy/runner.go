@@ -19,6 +19,7 @@ func getResponse(payload string, txID string, Code string, err error) []byte {
 		TxID:         txID,
 		TxValidCode:  Code,
 		Payload:      data,
+		RawPayload:   payload,
 	}
 	if err != nil {
 		rsp.ErrorMessage = err.Error()

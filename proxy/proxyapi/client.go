@@ -33,6 +33,7 @@ type Response struct {
 	TxID         string  `json:"txid"`
 	TxValidCode  string  `json:"valid_code"`
 	Payload      *Wallet `json:"data"`
+	RawPayload   string  `json:"rawdata"`
 }
 
 //Request 函数调用结构体
@@ -192,6 +193,38 @@ func GetWallet(apiURL string, walletAddress string) (*Wallet, error) {
 		return nil, errors.New(rsp.ErrorMessage)
 	}
 	return rsp.Payload, nil
+}
+
+//GetValueFromBlockChain get value from blockchain by key
+func GetValueFromBlockChain(apiURL string, key string) (string, error) {
+	request, err := NewRequest("dbget", []string{key})
+	if err != nil {
+		return "", err
+	}
+	rsp, err := CallAPI(apiURL, request, "")
+	if err != nil {
+		return "", err
+	}
+	if rsp.ErrorMessage != "success" {
+		return "", errors.New(rsp.ErrorMessage)
+	}
+	return rsp.RawPayload, nil
+}
+
+//SetValueToBlockChain write value to the blockchain by key
+func SetValueToBlockChain(apiURL string, key string, value string) error {
+	request, err := NewRequest("dbset", []string{key, value})
+	if err != nil {
+		return err
+	}
+	rsp, err := CallAPI(apiURL, request, "")
+	if err != nil {
+		return err
+	}
+	if rsp.ErrorMessage != "success" {
+		return errors.New(rsp.ErrorMessage)
+	}
+	return nil
 }
 
 //Send send token from fromwallet to toWallet

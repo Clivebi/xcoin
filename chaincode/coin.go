@@ -1,6 +1,8 @@
 package main
 
 import (
+	"crypto/md5"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -46,6 +48,10 @@ func (t *CoinChaincode) Invoke(stub shim.ChaincodeStubInterface) pb.Response {
 		buf, err = t.getWallet(req.Args, stub)
 	case "transfer", "send":
 		buf, err = t.transfer(req.Args, rawreq, sig, stub)
+	case "dbget":
+		buf, err = t.dbGetValue(req.Args, stub)
+	case "dbset":
+		buf, err = t.dbSetValue(req.Args, stub)
 	}
 	if err != nil {
 		return shim.Error(err.Error())
@@ -161,6 +167,28 @@ func (t *CoinChaincode) transfer(args []string, rawreq string, sig string, stub 
 		return nil, err
 	}
 	return from.toBuffer(), nil
+}
+
+func (t *CoinChaincode) hashKey(key string) string {
+	h := md5.New()
+	h.Write([]byte(key))
+	return hex.EncodeToString(h.Sum(nil))
+}
+
+func (t *CoinChaincode) dbGetValue(args []string, stub shim.ChaincodeStubInterface) ([]byte, error) {
+	if len(args) != 1 {
+		return nil, errors.New("mismatch arguments [key]")
+	}
+	key := t.hashKey(args[0])
+	return stub.GetState(key)
+}
+
+func (t *CoinChaincode) dbSetValue(args []string, stub shim.ChaincodeStubInterface) ([]byte, error) {
+	if len(args) != 2 {
+		return nil, errors.New("mismatch arguments [key,value]")
+	}
+	key := t.hashKey(args[0])
+	return nil, stub.PutState(key, []byte(args[1]))
 }
 
 func main() {
